@@ -6,7 +6,7 @@ class init {
 	private $_router = null;
 
 	public function __construct() {
-		parent::__construct();
+		//parent::__construct();
 
 		$this->_router = acs_router::getInstance();
 		require($this->configData->base_dir . 'acs_exception.php');

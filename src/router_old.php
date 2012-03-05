@@ -70,7 +70,7 @@ class router {
 
 	//Should not be public, but it has to be
 	public function __construct() {
-		parent::__construct();
+		//parent::__construct();
 	}
 
     /**
