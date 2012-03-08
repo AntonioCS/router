@@ -1,26 +1,29 @@
 <?php
 
 
-class router {
-    /**
-    * Were the routes will go
-    *
-    * @var array
-    */
-    private $_routes = array();
+class router {   
 
+    /**
+     * Where all the configurations will go
+     * 
+     * @var array
+     */
     private $_config = array();
 
     private $_view = null;
 
-    private $_paths;
 
     private $_controller_dirs = array();
 
 
-
+    
+    /**
+     * Default configurations
+     * 
+     * @var array
+     */
     public static $CONFIG = array(
-        'controller_dir' => '',
+        'controller_dir' => array(),
         'ext' => 'php',
         'routes' => array(
             '/^$/' => 'index', //default controller
@@ -30,16 +33,7 @@ class router {
     );
 
     public function __construct($config = null) {
-       /*
-        if ($config) {
-            foreach ($config as $k => $v) {
-                switch ($k) {
-
-
-                }
-            }
-        }
-         */
+ 
     }
 
     /**
@@ -47,8 +41,8 @@ class router {
     *
     * @param string/array $dir
     */
-    public function setControllerDir($dir) {
-        $this->_controller_dirs = array_merge($this->_controller_dirs,(array)$dir);
+    public function setControllerzsDir($dir) {
+        $this->_config['controller_dirs'] = array_merge($this->_config['controller_dirs'],(array)$dir);
         return $this;
     }
 
@@ -64,10 +58,11 @@ class router {
                 $this->addReRoute($k,$v);
             }
         else
-            $this->_reroutes[$route] = $path;
+            $this->_config['routes'][$route] = $path;
     }
+    
     public function getRoutes() {
-        return $this->_routes;
+        return $this->_config['routes'];
     }
 
     /**
