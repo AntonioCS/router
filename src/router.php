@@ -9,9 +9,7 @@ class router {
     */
     private $_routes = array();
 
-    private $_config = array(
-        'loadView' => true
-    );
+    private $_config = array();
 
     private $_view = null;
 
