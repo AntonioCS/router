@@ -60,12 +60,14 @@ class routerTest extends PHPUnit_Framework_TestCase
      * @covers router::run
      * @todo   Implement testRun().
      */
-    public function testRun()
-    {
-        // Remove the following lines when you implement this test.
+    public function testRun() {
+        
+        //$this->object
         $this->markTestIncomplete(
           'This test has not been implemented yet.'
         );
+        
+        
     }
 
     /**
