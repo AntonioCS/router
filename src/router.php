@@ -61,8 +61,33 @@ class router {
             $this->_config['routes'][$route] = $path;
     }
     
+    /**
+     * Return routes
+     * 
+     * @return array     
+     */
     public function getRoutes() {
         return $this->_config['routes'];
+    }
+    
+    
+    public function matchRoute($route) {
+        $routes = $this->getRoutes();
+        
+        foreach ($routes as $pattern => $value) {
+            if (preg_match($pattern,$route,$match)) {
+                if (is_callable($value) || is_array($value)) {
+                    
+                }
+                else {
+                    $route = $value;
+                    break;
+                }
+                
+            }
+        }
+        
+        return $route;
     }
 
     /**
@@ -99,4 +124,8 @@ class router {
     private function processPath($path) {
 
     }
+}
+
+class dispatcher {
+    
 }
