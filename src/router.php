@@ -21,37 +21,70 @@ class router {
         'controller_dir' => array(),
         'ext' => 'php',
         'routes' => array(
-            '/^$/' => 'index', //default controller
-        )
+            '' => 'index', //default controller
+        ),
+
+        'match_controller_action_view' => true,
+        'view_dir' => array()
     );
 
     public function __construct($config = null) {
-
+        if (!$config)
+            $this->_config = self::$CONFIG;
     }
 
     /**
     * Set the directory of the controllers
     *
     * @param string/array $dir
+    *
+    * @return router
+    *
+    * @throws InvalidControllerDirectoryException
     */
-    public function setControllerzsDir($dir) {
-        $this->_config['controller_dirs'] = array_merge($this->_config['controller_dirs'],(array)$dir);
+    public function setControllersDir($dir) {
+        if (!isset($this->_config['controller_dir']))
+            $this->_config['controller_dir'] = array();
+
+        foreach ((array)$dir as $dirCheck) {
+            if (!is_dir($dirCheck))
+                throw new InvalidControllerDirectoryException();
+        }
+
+        $this->_config['controller_dir'] = array_merge($this->_config['controller_dir'],(array)$dir);
         return $this;
+    }
+
+    /**
+    * Return the directory(ies) to the controller(s)
+    *
+    * @return array
+    */
+    public function getControllerDir() {
+        return $this->_config['controller_dir'];
     }
 
     /**
     * Set the destination of route
     *
     * @param string/array $route
-    * @param array/null $path This will be an associative array like 'Key' => function()
+    * @param string/function/array/null $path
+    *
+    * @return router
     */
     public function addRoute($route,$path = null) {
+
         if (is_array($route))
             foreach ($route as $k => $v) {
                 $this->addRoute($k,$v);
             }
-        else
+        else {
+            if (!isset($this->_config['routes']))
+                $this->_config['routes'] = array();
+
             $this->_config['routes'][$route] = $path;
+        }
+        return $this;
     }
 
     /**
@@ -63,6 +96,15 @@ class router {
         return $this->_config['routes'];
     }
 
+    /**
+    * Remove all routes
+    *
+    * @return router
+    */
+    public function clearRoutes() {
+        $this->_config['routes'] = array();
+        return $this;
+    }
 
     /**
     * Try to match the route to any route in the routes list
@@ -74,7 +116,7 @@ class router {
 
         foreach ($routes as $pattern => $value) {
             //The delimiter must be / for this to work correctly
-            if ($pattern[0] == '/' && preg_match($pattern,$route,$match)) {
+            if (!empty($pattern) && $pattern[0] == '/' && preg_match($pattern,$route,$match)) {
 
                 if (!is_callable($value) && !is_array($value)) {
                     //if matched test/(\d+) to test/$1
@@ -104,12 +146,28 @@ class router {
     public function run($path = null) {
         $route = $this->matchRoute($path);
 
+        if (is_callable($value) && is_array($value)) {
+            //dispatch function or array
+        }
+        else {//dispatch file system route if found
+
+        }
+
     }
 
+    /**
+    * Set a template render object
+    *
+    * @param object $view
+    */
     public function setView($view) {
 
     }
 
+    /**
+    * Return render object
+    *
+    */
     public function getView() {
 
     }
@@ -119,34 +177,11 @@ class router {
     public function loadcontroller($controller) {
     }
 
-    /**
-    * Set the path to the controllers
-    *
-    * @param string/array $path
-    *
-    * @return instance
-    */
-    public function setControllerPath($path) {
-        if (is_array())
-            $this->_config['controller_dir'] = array_merge($this->_config['controller_dir'],$path);
-        else
-            $this->_config['controller_dir'][] = $path;
-
-        return $this;
-    }
-
-    /**
-    * Return the paths to the controllers
-    *
-    */
-    public function getControllerPath() {
-        return $this->_config['controller_dir'];
-    }
-
-    private function processPath($path) {
-
-    }
 }
+
+class InvalidControllerDirectoryException extends Exception {}
+class NoControllerDirectoryException extends Exception {}
+
 
 class dispatcher {
 
