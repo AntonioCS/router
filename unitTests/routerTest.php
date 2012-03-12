@@ -15,12 +15,21 @@ class routerTest extends PHPUnit_Framework_TestCase
      */
     protected $object;
 
+    private function addTheseRoutes() {
+        $routes = array(
+            'teste' => 'teste__1',
+            '/index\.php\?(\d+)/' => 'index/$1',
+            '/^(.+)$/'  => 'index/$1'
+        );
+
+        $this->object->addRoute($routes);
+    }
+
     /**
      * Sets up the fixture, for example, opens a network connection.
      * This method is called before a test is executed.
      */
-    protected function setUp()
-    {
+    protected function setUp() {
         $this->object = new router;
     }
 
@@ -34,26 +43,29 @@ class routerTest extends PHPUnit_Framework_TestCase
 
     /**
      * @covers router::addRoute
-     * @todo   Implement testAddRoute().
      */
-    public function testAddRoute()
-    {
-        // Remove the following lines when you implement this test.
-        $this->markTestIncomplete(
-          'This test has not been implemented yet.'
-        );
+    public function testAddRoute() {
+        $this->object->addRoute('teste','teste__1');
+        $this->assertEquals(array('teste' => 'teste__1'),$this->object->getRoutes());
     }
 
-    /**
-     * @covers router::addReRoute
-     * @todo   Implement testAddReRoute().
-     */
-    public function testAddReRoute()
-    {
-        // Remove the following lines when you implement this test.
-        $this->markTestIncomplete(
-          'This test has not been implemented yet.'
-        );
+    public function testAddRouteArray() {
+        $route = array('teste' => 'teste__1');
+        $this->object->addRoute($route);
+        $this->assertEquals($route,$this->object->getRoutes());
+    }
+
+
+    public function testMatchRouteNormal() {
+        $this->addTheseRoutes();
+
+        $this->assertEquals('teste__1',$this->object->matchRoute('teste'));
+    }
+
+    public function testMatchRouteRegex() {
+        $this->addTheseRoutes();
+        $this->assertEquals('index/5',$this->object->matchRoute('index.php?5'));
+        $this->assertEquals('index/test1',$this->object->matchRoute('test1'));
     }
 
     /**
@@ -61,32 +73,23 @@ class routerTest extends PHPUnit_Framework_TestCase
      * @todo   Implement testRun().
      */
     public function testRun() {
-        
-        //$this->object
-        $this->markTestIncomplete(
-          'This test has not been implemented yet.'
-        );
-        
-        
+        $this->object->setControllerPath('controllers/');
+
+
     }
 
     /**
      * @covers router::setControllerPath
      * @todo   Implement testSetControllerPath().
      */
-    public function testSetControllerPath()
-    {
-        // Remove the following lines when you implement this test.
-        $this->markTestIncomplete(
-          'This test has not been implemented yet.'
-        );
+    public function _testSetControllerPath() {
     }
 
     /**
      * @covers router::getControllerPath
      * @todo   Implement testGetControllerPath().
      */
-    public function testGetControllerPath()
+    public function _testGetControllerPath()
     {
         // Remove the following lines when you implement this test.
         $this->markTestIncomplete(
