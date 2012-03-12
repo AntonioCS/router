@@ -19,7 +19,8 @@ class routerTest extends PHPUnit_Framework_TestCase
         $routes = array(
             'teste' => 'teste__1',
             '/index\.php\?(\d+)/' => 'index/$1',
-            '/^(.+)$/'  => 'index/$1'
+            '/^(.+)$/'  => 'index/$1',
+            '' => 'index'
         );
 
         $this->object->addRoute($routes);
@@ -41,15 +42,23 @@ class routerTest extends PHPUnit_Framework_TestCase
     {
     }
 
+
+    public function testClearRoutes() {
+        $routes = $this->object->clearRoutes()->getRoutes();
+        $this->assertTrue(empty($routes));
+    }
+
     /**
      * @covers router::addRoute
      */
     public function testAddRoute() {
+        $this->object->clearRoutes();
         $this->object->addRoute('teste','teste__1');
         $this->assertEquals(array('teste' => 'teste__1'),$this->object->getRoutes());
     }
 
     public function testAddRouteArray() {
+        $this->object->clearRoutes();
         $route = array('teste' => 'teste__1');
         $this->object->addRoute($route);
         $this->assertEquals($route,$this->object->getRoutes());
@@ -57,9 +66,12 @@ class routerTest extends PHPUnit_Framework_TestCase
 
 
     public function testMatchRouteNormal() {
+        $this->object->clearRoutes();
         $this->addTheseRoutes();
 
         $this->assertEquals('teste__1',$this->object->matchRoute('teste'));
+
+        $this->assertEquals('index',$this->object->matchRoute(''));
     }
 
     public function testMatchRouteRegex() {
@@ -69,31 +81,26 @@ class routerTest extends PHPUnit_Framework_TestCase
     }
 
     /**
+    * @expectedException InvalidControllerDirectoryException
+    */
+    public function testSetControllersDir() {
+        $this->object->setControllersDir('no_where/');
+    }
+
+    public function testSetControllersDirValid() {
+        $this->object->setControllersDir('controllers/');
+
+        $this->assertEquals(array('controllers/'),$this->object->getControllerDir());
+    }
+
+
+
+    /**
      * @covers router::run
      * @todo   Implement testRun().
      */
     public function testRun() {
-        $this->object->setControllerPath('controllers/');
 
 
-    }
-
-    /**
-     * @covers router::setControllerPath
-     * @todo   Implement testSetControllerPath().
-     */
-    public function _testSetControllerPath() {
-    }
-
-    /**
-     * @covers router::getControllerPath
-     * @todo   Implement testGetControllerPath().
-     */
-    public function _testGetControllerPath()
-    {
-        // Remove the following lines when you implement this test.
-        $this->markTestIncomplete(
-          'This test has not been implemented yet.'
-        );
     }
 }
