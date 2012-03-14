@@ -150,7 +150,8 @@ class router {
             //dispatch function or array
         }
         else {//dispatch file system route if found
-
+            //http://hakipedia.com/index.php/Poison_Null_Byte
+            //Use $file = str_replace(chr(0), '', $string);
         }
 
     }
