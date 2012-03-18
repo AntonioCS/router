@@ -23,6 +23,7 @@ class router {
         'routes' => array(
             '' => 'index', //default controller
         ),
+        'using_modrewrite' => true,
 
         'match_controller_action_view' => true,
         'view_dir' => array()
@@ -62,6 +63,30 @@ class router {
     */
     public function getControllerDir() {
         return $this->_config['controller_dir'];
+    }
+
+    /**
+    * Set the mod rewrite state variable
+    *
+    * @param bool $state
+    */
+    public function setModrewrite($state) {
+        $this->_config['using_modrewrite'] = (bool)$state;
+        return $this;
+    }
+
+
+    /**
+    * Fetch mod rewrite setting
+    *
+    */
+    public function getModrewrite() {
+        return $this->_config['using_modrewrite'];
+    }
+
+    public function formatRoute($route) {
+
+
     }
 
     /**
