@@ -12,6 +12,8 @@ class router {
 
     private $_view = null;
 
+    private $_routes = array();
+
     /**
      * Default configurations
      *
@@ -92,14 +94,15 @@ class router {
     /**
     * Set the destination of route
     *
-    * @param string/array $route
-    * @param string/function/array/null $path
+    * @param string $type GET/PUT/DELETE/POST - REQUEST_METHOD
+    * @param string/array $route - REQUEST_URI/QUERY_STRING
+    * @param string/function/array/null $destination
     *
     * @return router
     */
-    public function addRoute($route,$path = null) {
+    public function addRoute($type,$route,$destination = null) {
 
-        if (is_array($route))
+        if (is_array($type))
             foreach ($route as $k => $v) {
                 $this->addRoute($k,$v);
             }
@@ -107,7 +110,7 @@ class router {
             if (!isset($this->_config['routes']))
                 $this->_config['routes'] = array();
 
-            $this->_config['routes'][$route] = $path;
+            $this->_config['routes'][$route] = $destination;
         }
         return $this;
     }
@@ -172,6 +175,7 @@ class router {
         $route = $this->matchRoute($path);
 
         if (is_callable($value) && is_array($value)) {
+            $value();
             //dispatch function or array
         }
         else {//dispatch file system route if found
