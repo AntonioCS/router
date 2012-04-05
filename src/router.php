@@ -10,25 +10,73 @@ class router {
      */
     private $_config = array();
 
-    private $_view = null;
-
-    private $_routes = array();
-
     /**
      * Default configurations
      *
      * @var array
      */
-    public static $CONFIG = array(
-        'controller_dir' => array(),
-        'ext' => 'php',
+    public static $CONFIG = array(        
+        
+        /**
+         * To only allow routes that are in the route list. This is useful if there are controller settings but you still want to deny access to controllers that are not in the route list
+         * @var bool
+         */
+        'only_route_entries' => false,
+        /**
+         * File system Controller settings
+         * @var array
+         */
+        'controllers' => array(            
+            /**
+             * To search for controllers if no route matched a function or class 
+             * @var bool
+             */
+            'enabled' => true,            
+            /**
+             * Path to controllers 
+             * @var array
+             */
+            'dir' => array(),            
+            /**
+             * Ext of controllers 
+             * @var array
+             */
+            'ext' => array('php'),            
+            /**
+             * Try to match a view to the controller
+             * @var bool
+             */
+            'match_controller_view' => true,            
+            /**
+             * Try to match a view to the controller's action
+             * @var bool 
+             */
+            'match_controller_action_view' => true,
+            /**
+             * Name/function of the view class
+             * @var string/function 
+             */            
+            'view_class' => '',
+        ),        
+        //Routes of the router separated by types
         'routes' => array(
-            '' => 'index', //default controller
+            'get' => array(
+                '' => 'index' //default controller
+            ),
+            'post' => array(),
+            'put' => array(),
+            'delete' => array(),
+            'all' => array()
         ),
-        'using_modrewrite' => true,
-
-        'match_controller_action_view' => true,
-        'view_dir' => array()
+        'modrewrite' => array(
+            'enabled' => true,
+            //if not using modrewrite where to get controller and action
+            'query_string' => array(
+                //All the query string parameters besides these two will be treated as parameters to the action
+                'controller' => 'qc',
+                'action' => 'qa'
+            )            
+        )                       
     );
 
     public function __construct($config = null) {
@@ -36,6 +84,26 @@ class router {
             $this->_config = self::$CONFIG;
     }
 
+    /**
+     * Enable or Disable the use of file controllers
+     * 
+     * @param bool $state 
+     * 
+     * @return router
+     */
+    public function setControllersState($state) {
+        $this->_config['controllers']['enabled'] = $state;
+        return $this;        
+    }
+    
+    /**
+     *
+     * @return bool
+     */
+    public function getControllersState() {
+        return $this->_config['controllers']['enabled'];        
+    }
+    
     /**
     * Set the directory of the controllers
     *
@@ -46,15 +114,15 @@ class router {
     * @throws InvalidControllerDirectoryException
     */
     public function setControllersDir($dir) {
-        if (!isset($this->_config['controller_dir']))
-            $this->_config['controller_dir'] = array();
+        if (!isset($this->_config['controllers']['dir']))
+            $this->_config['controllers']['dir'] = array();
 
         foreach ((array)$dir as $dirCheck) {
             if (!is_dir($dirCheck))
-                throw new InvalidControllerDirectoryException();
+                throw new InvalidControllerDirectoryException($dirCheck);
         }
 
-        $this->_config['controller_dir'] = array_merge($this->_config['controller_dir'],(array)$dir);
+        $this->_config['controllers']['dir'] = array_merge($this->_config['controllers']['dir'],(array)$dir);
         return $this;
     }
 
@@ -64,7 +132,7 @@ class router {
     * @return array
     */
     public function getControllerDir() {
-        return $this->_config['controller_dir'];
+        return $this->_config['controllers']['dir'];
     }
 
     /**
@@ -72,8 +140,8 @@ class router {
     *
     * @param bool $state
     */
-    public function setModrewrite($state) {
-        $this->_config['using_modrewrite'] = (bool)$state;
+    public function setModrewriteState($state) {
+        $this->_config['modrewrite']['enable'] = (bool)$state;
         return $this;
     }
 
@@ -82,8 +150,8 @@ class router {
     * Fetch mod rewrite setting
     *
     */
-    public function getModrewrite() {
-        return $this->_config['using_modrewrite'];
+    public function getModrewriteState() {
+        return $this->_config['modrewrite']['enable'];
     }
 
     public function formatRoute($route) {
@@ -96,7 +164,7 @@ class router {
     *
     * @param string $type GET/PUT/DELETE/POST - REQUEST_METHOD
     * @param string/array $route - REQUEST_URI/QUERY_STRING
-    * @param string/function/array/null $destination
+    * @param string/function/array/null $destination - 
     *
     * @return router
     */
@@ -114,6 +182,11 @@ class router {
         }
         return $this;
     }
+    
+    public function addGet($route,$dest = null) {
+        return $this->addRoute('get', $route,$dest);
+    }
+        
 
     /**
      * Return routes
