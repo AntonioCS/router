@@ -15,6 +15,7 @@ class routerTest extends PHPUnit_Framework_TestCase
      */
     protected $object;
 
+
     private function addTheseRoutes() {
         $routes = array(
             'teste' => 'teste__1',
@@ -32,6 +33,7 @@ class routerTest extends PHPUnit_Framework_TestCase
      */
     protected function setUp() {
         $this->object = new router;
+
     }
 
     /**
