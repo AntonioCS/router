@@ -18,10 +18,13 @@ class router {
     public static $CONFIG = array(        
         
         /**
-         * To only allow routes that are in the route list. This is useful if there are controller settings but you still want to deny access to controllers that are not in the route list
+         * To only allow routes that are in the route list. 
+         * This is useful if there are controller settings but you still want to 
+         * deny access to controllers that are not in the route list
+         * 
          * @var bool
          */
-        'only_route_entries' => false,
+        'only_route_entries' => false,        
         /**
          * File system Controller settings
          * @var array
@@ -60,14 +63,15 @@ class router {
         ),        
         //Routes of the router separated by types
         'routes' => array(
-            'get' => array(
+            'GET' => array(
                 '' => 'index' //default controller
             ),
-            'post' => array(),
-            'put' => array(),
-            'delete' => array(),
-            'all' => array()
-        ),
+            'POST' => array(),
+            'PUT' => array(),
+            'DELETE' => array(),
+            'ALL' => array()
+        ),   
+        
         'modrewrite' => array(
             'enabled' => true,
             //if not using modrewrite where to get controller and action
@@ -78,6 +82,26 @@ class router {
             )            
         )                       
     );
+    
+    /**
+     * Valid route types
+     * 
+     * @var array
+     */
+    private $_validRouteTypes = array(
+        'GET' => 1,
+        'PUT' => 1,
+        'POST' => 1,
+        'DELETE' => 1,
+        'ALL' => 1
+    );
+    
+    /**
+     * Used to determine if a match was found in the routes list (in case I have the only_route_entries set to true)
+     * 
+     * @var bool
+     */
+    private $_isRouteInList = false;
 
     public function __construct($config = null) {
         if (!$config)
@@ -160,43 +184,68 @@ class router {
     }
 
     /**
-    * Set the destination of route
+    * Create a new route in the 
     *
-    * @param string $type GET/PUT/DELETE/POST - REQUEST_METHOD
+    * @param string $type GET/PUT/DELETE/POST/ALL - REQUEST_METHOD
     * @param string/array $route - REQUEST_URI/QUERY_STRING
-    * @param string/function/array/null $destination - 
+    * @param string/function/array/null $destination - The destination can be null because I set the option to only allow registered routes. 
+    *                                      So it might not redirect to any where or have a function/class but just be a normal route to a controller/action file
     *
+    * @throws InvalidRouteTypeException 
+    * 
     * @return router
     */
     public function addRoute($type,$route,$destination = null) {
 
-        if (is_array($type))
+        if (is_array($route)) {
             foreach ($route as $k => $v) {
-                $this->addRoute($k,$v);
+                $this->addRoute($type,$k,$v);
             }
+        }
         else {
             if (!isset($this->_config['routes']))
                 $this->_config['routes'] = array();
+            
+            $type = strtoupper($type);
+            if (!isset($this->config['routes'][$type])) {
+                if (!isset($this->_validRouteTypes[$type]))
+                    throw new InvalidRouteTypeException($type);                        
+                        
+                $this->_config['routes'][$type] = array();
+            }
 
-            $this->_config['routes'][$route] = $destination;
+            $this->_config['routes'][$type][$route] = $destination;
         }
-        return $this;
-    }
-    
-    public function addGet($route,$dest = null) {
-        return $this->addRoute('get', $route,$dest);
-    }
         
+        return $this;
+    }    
+    
 
     /**
      * Return routes
      *
+     * @param string $type 
+     * 
+     * @throws InvalidRouteTypeException
+     * 
      * @return array
      */
-    public function getRoutes() {
+    public function getRoutes($type = null) {
+        if ($type) {  
+            $type = strtoupper($type);
+            
+            if (!isset($this->_validRouteTypes[$type]))
+                throw new InvalidRouteTypeException($type);
+            
+            if (!isset($this->_config['routes'][$type]))
+                return null;
+            
+            return $this->_config['routes'][$type];            
+        }
+        
         return $this->_config['routes'];
     }
-
+    
     /**
     * Remove all routes
     *
@@ -211,25 +260,33 @@ class router {
     * Try to match the route to any route in the routes list
     *
     * @param mixed $route
+    * @param string $type 
     */
-    public function matchRoute($route) {
+    public function matchRoute($route, $type = null) {
         $routes = $this->getRoutes();
 
+        
         foreach ($routes as $pattern => $value) {
             //The delimiter must be / for this to work correctly
             if (!empty($pattern) && $pattern[0] == '/' && preg_match($pattern,$route,$match)) {
-
-                if (!is_callable($value) && !is_array($value)) {
-                    //if matched test/(\d+) to test/$1
-                    $route = preg_replace($pattern,$value,$route);
+                $this->_isRouteInList = true;
+                        
+                if ($value != null) {
+                    if (!is_callable($value) && !is_array($value)) {
+                        //if matched test/(\d+) to test/$1
+                        $route = preg_replace($pattern,$value,$route);
+                    }
+                    else
+                        $route = $value;
                 }
-                else
-                    $route = $value;
-
                 break;
             }
             elseif ($pattern == $route) {
-                $route = $value;
+                $this->_isRouteInList = true;
+                
+                if ($value != null)
+                    $route = $value;
+                
                 break;
             }
         }
@@ -282,9 +339,12 @@ class router {
 
 }
 
+/** 
+ * Router exceptions
+ */
 class InvalidControllerDirectoryException extends Exception {}
 class NoControllerDirectoryException extends Exception {}
-
+class InvalidRouteTypeException extends Exception {}
 
 class dispatcher {
 
