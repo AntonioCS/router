@@ -14,16 +14,54 @@ class routerTest extends PHPUnit_Framework_TestCase
      * @var router
      */
     protected $object;
+    
+    
+    /**
+     * Using reflection to return the _config property of the router
+     * http://www.php.net/manual/en/class.reflectionproperty.php#99661
+     * 
+     * @return ReflectionProperty  
+     */
+    private function getRouteObjectConfig() {
+        $r = new ReflectionObject($this->object);
+        $prop = $r->getProperty('_config');
+        $prop->setAccessible(true);
+        return $prop;
+    }
+    
+    /**
+     * 
+     * @return array The configuration array of the route object (using reflection to make it available)
+     */
+    private function getRouteObjectConfigData() {      
+        return $this->getRouteObjectConfig()->getValue($this->object);            
+    }
+    
+    /**
+     * Change the private property _config
+     * 
+     * @param array $data 
+     */
+    private function setRouteObjectConfigData($data) {
+        $this->getRouteObjectConfig()->setValue($this->object, $data);
+    }
 
     private function addTheseRoutes() {
         $routes = array(
-            'teste' => 'teste__1',
-            '/index\.php\?(\d+)/' => 'index/$1',
-            '/^(.+)$/'  => 'index/$1',
-            '' => 'index'
+            'get' => array(
+                'teste' => 'teste__1',
+                '/index\.php\?(\d+)/' => 'index/$1',
+                '/^(.+)$/'  => 'index/$1',
+                '' => 'index'
+             ),
+            'put' => array(),
+            'delete' => array(),
+            'post' => array()
         );
+        
+        $this->object->addRoute('get', $routes['get']);
 
-        $this->object->addRoute($routes);
+        //$this->object->addRoute($routes);
     }
 
     /**
@@ -38,14 +76,13 @@ class routerTest extends PHPUnit_Framework_TestCase
      * Tears down the fixture, for example, closes a network connection.
      * This method is called after a test is executed.
      */
-    protected function tearDown()
-    {
-    }
-
+    protected function tearDown() {}
 
     public function testClearRoutes() {
-        $routes = $this->object->clearRoutes()->getRoutes();
-        $this->assertTrue(empty($routes));
+        $this->object->clearRoutes();
+        $c = $this->getRouteObjectConfigData();
+        
+        $this->assertTrue(empty($c['routes']));
     }
 
     /**
@@ -53,15 +90,22 @@ class routerTest extends PHPUnit_Framework_TestCase
      */
     public function testAddRoute() {
         $this->object->clearRoutes();
-        $this->object->addRoute('teste','teste__1');
-        $this->assertEquals(array('teste' => 'teste__1'),$this->object->getRoutes());
+        
+        $this->object->addRoute('get','teste','teste__1');
+        
+        $c = $this->getRouteObjectConfigData();
+        
+        $this->assertEquals(array('teste' => 'teste__1'),$c['routes']['GET']);
     }
 
     public function testAddRouteArray() {
         $this->object->clearRoutes();
-        $route = array('teste' => 'teste__1');
-        $this->object->addRoute($route);
-        $this->assertEquals($route,$this->object->getRoutes());
+        $routes = array('teste' => 'teste__1');
+        $this->object->addRoute('GET',$routes);
+        
+        $c = $this->getRouteObjectConfigData();
+        
+        $this->assertEquals($routes,$c['routes']['GET']);
     }
 
 
@@ -75,7 +119,7 @@ class routerTest extends PHPUnit_Framework_TestCase
     }
 
     public function testMatchRouteRegex() {
-        $this->addTheseRoutes();
+        //$this->addTheseRoutes();
         $this->assertEquals('index/5',$this->object->matchRoute('index.php?5'));
         $this->assertEquals('index/test1',$this->object->matchRoute('test1'));
     }
@@ -88,9 +132,10 @@ class routerTest extends PHPUnit_Framework_TestCase
     }
 
     public function testSetControllersDirValid() {
-        $this->object->setControllersDir('controllers/');
-
-        $this->assertEquals(array('controllers/'),$this->object->getControllerDir());
+        $this->object->setControllersDir('controllers/');        
+        $c = $this->getRouteObjectConfigData();
+        $this->assertEquals(array('controllers/'),$c['controllers']['dir']);
+                //$this->object->getControllerDir());
     }
 
 
