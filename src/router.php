@@ -15,8 +15,8 @@ class router {
      *
      * @var array
      */
-    public static $CONFIG = array(        
-        
+    public static $CONFIG = array(
+
         /**
          * To only allow routes that are in the route list. 
          * This is useful if there are controller settings but you still want to 
@@ -29,38 +29,33 @@ class router {
          * File system Controller settings
          * @var array
          */
-        'controllers' => array(            
+        'controllers' => array(
             /**
-             * To search for controllers if no route matched a function or class 
+             * To search for controllers if no route matched a function or class
              * @var bool
              */
-            'enabled' => true,            
+            'enabled' => true,
             /**
-             * Path to controllers 
+             * Path to controllers
              * @var array
              */
-            'dir' => array(),            
+            'dir' => array(),
             /**
-             * Ext of controllers 
+             * Ext of controllers
              * @var array
              */
-            'ext' => array('php'),            
+            'ext' => array('php'),
             /**
              * Try to match a view to the controller
              * @var bool
              */
-            'match_controller_view' => true,            
+            'match_controller_view' => true,
             /**
              * Try to match a view to the controller's action
-             * @var bool 
+             * @var bool
              */
-            'match_controller_action_view' => true,
-            /**
-             * Name/function of the view class
-             * @var string/function 
-             */            
-            'view_class' => '',
-        ),        
+            'match_controller_action_view' => true
+        ),
         //Routes of the router separated by types
         'routes' => array(
             'GET' => array(
@@ -79,8 +74,13 @@ class router {
                 //All the query string parameters besides these two will be treated as parameters to the action
                 'controller' => 'qc',
                 'action' => 'qa'
-            )            
-        )                       
+            )
+        ),
+        /**
+         * Name/function of the view class
+         * @var string/function
+         */
+        'view_class' => ''
     );
     
     /**
@@ -110,24 +110,24 @@ class router {
 
     /**
      * Enable or Disable the use of file controllers
-     * 
-     * @param bool $state 
-     * 
+     *
+     * @param bool $state
+     *
      * @return router
      */
     public function setControllersState($state) {
         $this->_config['controllers']['enabled'] = $state;
-        return $this;        
+        return $this;
     }
-    
+
     /**
      *
      * @return bool
      */
     public function getControllersState() {
-        return $this->_config['controllers']['enabled'];        
+        return $this->_config['controllers']['enabled'];
     }
-    
+
     /**
     * Set the directory of the controllers
     *
@@ -158,6 +158,85 @@ class router {
     public function getControllerDir() {
         return $this->_config['controllers']['dir'];
     }
+
+    /**
+    * Add a valid extension to a controller file
+    *
+    * @param string/array $ext
+    */
+    public function addControllerExt($ext) {
+        $this->_config['controllers']['ext'] = array_merge($this->_config['controllers']['ext'],(array)$ext);
+    }
+
+    /**
+    * Delete an extension for a controller
+    *
+    * @param string/array $ext
+    *
+    * @return router
+    */
+    public function delControllerExt($ext) {
+        if (is_array($ext)) {
+            foreach ($ext as $e)
+                $this->delControllerExt($e);
+        }
+        else {
+            foreach ($this->_config['controllers']['ext'] as $k => $e) {
+                if ($e == $ext) {
+                    unset($this->_config['controllers']['ext'][$k]);
+                    break;
+                }
+            }
+
+            return $this;
+        }
+    }
+
+    /**
+    * Clear Controller extensions
+    *
+    * @returns router
+    */
+    public function clearControllerExt() {
+        $this->_config['controllers']['ext'] = array();
+        return $this;
+    }
+
+
+    public function setControllerMatchView($state) {
+
+    }
+
+    public function getControllerMatchView() {
+
+    }
+
+    public function setControllerMatchActionView($state) {
+
+    }
+
+    public function getControllerMatchActionView($state) {
+
+    }
+
+
+ //'ext' => array('php'),
+            /**
+             * Try to match a view to the controller
+             * @var bool
+             */
+   //         'match_controller_view' => true,
+            /**
+             * Try to match a view to the controller's action
+             * @var bool
+             */
+     //       'match_controller_action_view' => true,
+            /**
+             * Name/function of the view class
+             * @var string/function
+             */
+       //     'view_class' => '',
+
 
     /**
     * Set the mod rewrite state variable
@@ -219,7 +298,8 @@ class router {
         
         return $this;
     }    
-    
+
+
 
     /**
      * Return routes

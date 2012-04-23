@@ -46,6 +46,7 @@ class routerTest extends PHPUnit_Framework_TestCase
         $this->getRouteObjectConfig()->setValue($this->object, $data);
     }
 
+
     private function addTheseRoutes() {
         $routes = array(
             'get' => array(
@@ -70,6 +71,7 @@ class routerTest extends PHPUnit_Framework_TestCase
      */
     protected function setUp() {
         $this->object = new router;
+
     }
 
     /**
