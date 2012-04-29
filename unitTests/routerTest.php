@@ -102,14 +102,16 @@ class routerTest extends PHPUnit_Framework_TestCase
 
     public function testAddRouteArray() {
         $this->object->clearRoutes();
-        $routes = array('teste' => 'teste__1');
+        $routes = array(
+                        'teste' => 'teste__1',
+                        'blaaaa' => 'sffdsasafd'
+                   );
         $this->object->addRoute('GET',$routes);
         
         $c = $this->getRouteObjectConfigData();
         
         $this->assertEquals($routes,$c['routes']['GET']);
     }
-
 
     public function testMatchRouteNormal() {
         $this->object->clearRoutes();
@@ -121,10 +123,39 @@ class routerTest extends PHPUnit_Framework_TestCase
     }
 
     public function testMatchRouteRegex() {
-        //$this->addTheseRoutes();
+        $this->addTheseRoutes();
         $this->assertEquals('index/5',$this->object->matchRoute('index.php?5'));
         $this->assertEquals('index/test1',$this->object->matchRoute('test1'));
     }
+    
+    public function testMatchRouteType() {
+        $this->object->clearRoutes();
+        $routes = array(
+                        'teste' => 'teste__1',
+                        'blaaaa' => 'sffdsasafd'
+                   );
+        $this->object->addRoute('put',$routes);
+        
+        $c = $this->getRouteObjectConfigData();        
+        $this->assertEquals($routes,$c['routes']['PUT']);
+        $this->assertEquals('teste__1',$this->object->matchRoute('teste'));
+        $this->assertEquals('sffdsasafd',$this->object->matchRoute('blaaaa','put'));
+    }
+    
+    public function testMatchRouteTypeAll() {
+        $this->object->clearRoutes();
+        $routes = array(
+                        'teste' => 'teste__1'                        
+                   );
+        $routes_all = array(
+                        'blaaaa' => 'sffdsasafd'
+            );
+        $this->object->addRoute('put',$routes);
+        $this->object->addRoute('all', $routes_all);
+        
+        $this->assertEquals('sffdsasafd',$this->object->matchRoute('blaaaa','put'));
+    }
+    
 
     /**
     * @expectedException InvalidControllerDirectoryException
@@ -139,14 +170,89 @@ class routerTest extends PHPUnit_Framework_TestCase
         $this->assertEquals(array('controllers/'),$c['controllers']['dir']);
                 //$this->object->getControllerDir());
     }
+    
+    public function testGetControllersDir() {
+        $c = $this->getRouteObjectConfigData();
+        $dir = array('controllers/');
+        $c['controllers']['dir'] = $dir;
+        
+        $this->setRouteObjectConfigData($c);
+        
+        $this->assertEquals($dir,$this->object->getControllerDir());
+    }
 
 
+    public function testSetControllersState() {        
+        $this->object->setControllersState(false);
+        $c = $this->getRouteObjectConfigData();
+        
+        $this->assertFalse($c['controllers']['enabled']);
+        //$this->setRouteObjectConfigData($c);
+        
+        //$this->_config['controllers']['enabled'] = $state;
+        //return $this;
+    }
+
+    public function testGetControllersState() {
+        $c = $this->getRouteObjectConfigData();
+        
+        $c['controllers']['enabled'] = true;
+        $this->setRouteObjectConfigData($c);
+                
+        $this->assertTrue($this->object->getControllersState());                        
+    }
+    
+    public function testAddControllerExt() {
+        $ext = 'php5';
+        $this->object->addControllerExt($ext);
+        $c = $this->getRouteObjectConfigData();
+        
+        $this->assertEquals(array('php',$ext),$c['controllers']['ext']);
+    }
+    
+    public function testAddControllerExtArray() {
+        $ext = array('php5','php3');
+        $this->object->addControllerExt($ext);
+        $c = $this->getRouteObjectConfigData();
+        
+        $this->assertEquals(array('php','php5','php3'),$c['controllers']['ext']);
+    }
+    
+    public function testAddControllerExtPreventDuplication() {
+        $ext = 'php';
+        $this->object->addControllerExt($ext);
+        $c = $this->getRouteObjectConfigData();
+        
+        $this->assertEquals(array('php'),$c['controllers']['ext']);
+    }
+
+    
+    public function testDelControllerExt() {
+        $ext = 'php';
+        $this->object->delControllerExt($ext);
+        
+        $c = $this->getRouteObjectConfigData();        
+        $this->assertEquals(array(),$c['controllers']['ext']);
+    }
+    
+    public function testDelControllerExtArray() {
+        $ext = array('php','bogus');
+        $this->object->delControllerExt($ext);
+        
+        $c = $this->getRouteObjectConfigData();        
+        $this->assertEquals(array(),$c['controllers']['ext']);
+    }
+
+    
+    public function testClearControllerExt() {
+       
+    }
 
     /**
      * @covers router::run
      * @todo   Implement testRun().
      */
-    public function testRun() {
+    public function _testRun() {
 
 
     }
