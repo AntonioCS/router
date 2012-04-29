@@ -66,6 +66,18 @@ class router {
             'DELETE' => array(),
             'ALL' => array()
         ),   
+       /**
+        * Valid route types
+        * 
+        * @var array
+        */
+        'valid_route_types' => array(
+            'GET' => 1,
+            'PUT' => 1,
+            'POST' => 1,
+            'DELETE' => 1,
+            'ALL' => 1 //Special case so that a route can be valid in any case
+        ),
         
         'modrewrite' => array(
             'enabled' => true,
@@ -80,20 +92,7 @@ class router {
          * Name/function of the view class
          * @var string/function
          */
-        'view_class' => ''
-    );
-    
-    /**
-     * Valid route types
-     * 
-     * @var array
-     */
-    private $_validRouteTypes = array(
-        'GET' => 1,
-        'PUT' => 1,
-        'POST' => 1,
-        'DELETE' => 1,
-        'ALL' => 1
+        'view_class' => ''       
     );
     
     /**
@@ -102,10 +101,52 @@ class router {
      * @var bool
      */
     private $_isRouteInList = false;
+    
+    
+    /**
+     * Access the _config property and return specified section
+     * 
+     * @param string $section
+     * @return array/string
+     * 
+     * @throws OutOfBoundsException 
+     */
+    private function _getConfig($section) {
+        if (!isset($this->_config[$section]))
+            throw new OutOfBoundsException($section);
+        
+        return $this->_config[$section];            
+    }
+    
+    
+    /**
+     * Check if a type is valid.
+     * 
+     * @param string $type 
+     * 
+     * @return string $type Return the type if valid (in uppercase)
+     *      
+     * @throws InvalidRouteTypeException 
+     */
+    private function _isValidRouteType($type) {
+        $valid_route_types = $this->_getConfig('valid_route_types');        
+        $type = strtoupper($type);
+        
+        if (!isset($valid_route_types[$type])) 
+            throw new InvalidRouteTypeException($type);
+        
+        
+        return $type;
+        
+    }
+    
 
     public function __construct($config = null) {
         if (!$config)
             $this->_config = self::$CONFIG;
+        else {
+            $this->_config = array_merge(self::$CONFIG,$config);
+        }
     }
 
     /**
@@ -163,9 +204,23 @@ class router {
     * Add a valid extension to a controller file
     *
     * @param string/array $ext
+    * 
+    * @return router
     */
     public function addControllerExt($ext) {
-        $this->_config['controllers']['ext'] = array_merge($this->_config['controllers']['ext'],(array)$ext);
+        if (is_array($ext)) {
+            foreach ($ext as $e)
+                $this->addControllerExt ($e);
+        }
+        else {
+            if (!isset($this->_config['controllers']['ext']))
+                $this->_config['controllers']['ext'] = array();
+            
+            if (in_array($ext, $this->_config['controllers']['ext']) === false)        
+                array_push($this->_config['controllers']['ext'],$ext);
+        }
+        
+        return $this;
     }
 
     /**
@@ -257,11 +312,6 @@ class router {
         return $this->_config['modrewrite']['enable'];
     }
 
-    public function formatRoute($route) {
-
-
-    }
-
     /**
     * Create a new route in the 
     *
@@ -277,7 +327,7 @@ class router {
     public function addRoute($type,$route,$destination = null) {
 
         if (is_array($route)) {
-            foreach ($route as $k => $v) {
+            foreach ($route as $k => $v) {      
                 $this->addRoute($type,$k,$v);
             }
         }
@@ -285,11 +335,9 @@ class router {
             if (!isset($this->_config['routes']))
                 $this->_config['routes'] = array();
             
-            $type = strtoupper($type);
-            if (!isset($this->config['routes'][$type])) {
-                if (!isset($this->_validRouteTypes[$type]))
-                    throw new InvalidRouteTypeException($type);                        
-                        
+            $type = $this->_isValidRouteType($type);            
+            
+            if (!isset($this->_config['routes'][$type])) {                                                                        
                 $this->_config['routes'][$type] = array();
             }
 
@@ -311,19 +359,18 @@ class router {
      * @return array
      */
     public function getRoutes($type = null) {
+        $routes = $this->_getConfig('routes');
+        
         if ($type) {  
-            $type = strtoupper($type);
-            
-            if (!isset($this->_validRouteTypes[$type]))
-                throw new InvalidRouteTypeException($type);
-            
-            if (!isset($this->_config['routes'][$type]))
+            $type = $this->_isValidRouteType($type);
+                        
+            if (!isset($routes[$type]))
                 return null;
             
-            return $this->_config['routes'][$type];            
+            return $routes[$type];
         }
         
-        return $this->_config['routes'];
+        return $routes;
     }
     
     /**
@@ -342,11 +389,47 @@ class router {
     * @param mixed $route
     * @param string $type 
     */
-    public function matchRoute($route, $type = null) {
-        $routes = $this->getRoutes();
-
+    public function matchRoute($route, $type = null) {                    
+        $routes = $this->getRoutes($type);        
         
+        if (!empty($routes)) {
+            if ($type) {
+                $all = $this->getRoutes('all');
+                if (!empty($all))
+                    $routes = array_merge($routes,$all);                
+                
+                $route = $this->_matchRouteRecursive($routes, $route);
+            }
+            else {
+                $types = array_keys($this->_getConfig('valid_route_types'));
+                $newroute = null;
+                                
+                foreach ($types as $route_type) {  
+                    if (!isset($routes[$route_type]))
+                        continue;
+                    
+                    $newroute = $this->_matchRouteRecursive($routes[$route_type], $route);
+                    if ($newroute != $route || $this->_isRouteInList) {                      
+                        $route = $newroute;
+                        break;
+                    }                    
+                }
+            }
+        }
+
+        return $route;
+    }
+    
+    /**
+     * Match the route to a given set of routes
+     * 
+     * @param array $routes - Routes of a specific type (GET, POST etc..)
+     * @param string $route
+     * @return string
+     */
+    private function _matchRouteRecursive($routes,$route) {        
         foreach ($routes as $pattern => $value) {
+            //var_dump($route,$pattern,$value);
             //The delimiter must be / for this to work correctly
             if (!empty($pattern) && $pattern[0] == '/' && preg_match($pattern,$route,$match)) {
                 $this->_isRouteInList = true;
@@ -377,11 +460,15 @@ class router {
     /**
     * Run the given path
     *
-    * @param string/null $path
+    * @param string/null $path - Url
+    * @param string/null $type - Request method
     *
     * If null the current url will be used
     */
-    public function run($path = null) {
+    public function run($path = null, $type = null) {
+   
+        
+        
         $route = $this->matchRoute($path);
 
         if (is_callable($value) && is_array($value)) {
