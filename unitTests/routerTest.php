@@ -245,7 +245,10 @@ class routerTest extends PHPUnit_Framework_TestCase
 
     
     public function testClearControllerExt() {
-       
+        $this->object->clearControllerExt();
+        
+        $c = $this->getRouteObjectConfigData();        
+        $this->assertEquals(array(),$c['controllers']['ext']);       
     }
 
     /**
