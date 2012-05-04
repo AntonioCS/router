@@ -112,10 +112,35 @@ class router {
      * @throws OutOfBoundsException 
      */
     private function _getConfig($section) {
-        if (!isset($this->_config[$section]))
-            throw new OutOfBoundsException($section);
+        $sections = explode('/',$section);
+        $tempSectionData = null;
+        $e = null;        
         
-        return $this->_config[$section];            
+        foreach ($sections as $currentSection) {
+            if ($tempSectionData) {
+                if (!isset($tempSectionData[$currentSection])) {
+                    $e = $section . ' - ' . $currentSection;
+                    break;
+                }
+                else {
+                    $tempSectionData = $tempSectionData[$currentSection];
+                }
+            }
+            else {
+                if (!isset($this->_config[$currentSection])) {
+                    $e = $section . ' - ' . $currentSection;
+                    break;
+                }
+                else {
+                    $tempSectionData = $this->_config[$currentSection];
+                }
+            }
+        }
+        
+        if ($e)
+            throw new OutOfBoundsException($e);
+        
+        return $tempSectionData;            
     }
     
     
@@ -384,7 +409,7 @@ class router {
     }
 
     /**
-    * Try to match the route to any route in the routes list
+    * Try to match the route to any route in the routes list. (going through all the types)
     *
     * @param mixed $route
     * @param string $type 
@@ -421,7 +446,7 @@ class router {
     }
     
     /**
-     * Match the route to a given set of routes
+     * Match the route to a given set of routes (used with matchRoute)
      * 
      * @param array $routes - Routes of a specific type (GET, POST etc..)
      * @param string $route
@@ -466,18 +491,41 @@ class router {
     * If null the current url will be used
     */
     public function run($path = null, $type = null) {
-   
+        if ($path === null) {
+            if (isset($_SERVER) && isset($_SERVER['QUERY_STRING'])) {
+                //In an mvc environment the index.php gets all the requests so I only need the query string part
+                $path = str_replace(chr(0),'',$_SERVER['QUERY_STRING']); //Nul byte protection - http://hakipedia.com/index.php/Poison_Null_Byte
+            }
+            else {
+                throw new NoPathSpecifiedException();
+            }
+        }        
+        
+        if (!$type) {
+            if (isset($_SERVER) && isset($_SERVER['REQUEST_METHOD'])) {
+                $type = $_SERVER['REQUEST_METHOD'];
+            }            
+        }
         
         
-        $route = $this->matchRoute($path);
-
-        if (is_callable($value) && is_array($value)) {
-            $value();
+        $route = $this->matchRoute($path,$type);                
+        $res = null;
+        
+        if ($this->_getConfig('only_route_entries') && !$this->_isRouteInList) {
+            throw new PathNotInRouteListException($route);
+        }
+        
+        if (is_callable($route)) {
+            $res = $route();
             //dispatch function or array
         }
-        else {//dispatch file system route if found
+        elseif (is_array($route)) {
+            
+        }
+        else {
+            ////dispatch file system route if found
             //http://hakipedia.com/index.php/Poison_Null_Byte
-            //Use $file = str_replace(chr(0), '', $string);
+            //Use $file = str_replace(chr(0), '', $string);          
         }
 
     }
@@ -512,6 +560,8 @@ class router {
 class InvalidControllerDirectoryException extends Exception {}
 class NoControllerDirectoryException extends Exception {}
 class InvalidRouteTypeException extends Exception {}
+class NoPathSpecifiedException extends Exception {}
+class PathNotInRouteListException extends Exception {}
 
 class dispatcher {
 
