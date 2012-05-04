@@ -79,6 +79,14 @@ class routerTest extends PHPUnit_Framework_TestCase
      * This method is called after a test is executed.
      */
     protected function tearDown() {}
+    
+    public function testPrivateGetConfigData() {
+        $r = new ReflectionObject($this->object);
+        $privGetConfig = $r->getMethod('_getConfig');
+        $privGetConfig->setAccessible(true);
+        $privGetConfig->invoke($this->object);//,'controllers/enabled');        
+        exit;                     
+    }
 
     public function testClearRoutes() {
         $this->object->clearRoutes();
