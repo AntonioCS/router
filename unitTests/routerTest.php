@@ -80,12 +80,23 @@ class routerTest extends PHPUnit_Framework_TestCase
      */
     protected function tearDown() {}
     
-    public function testPrivateGetConfigData() {
+    
+    public function testPrivateGetConfigData() {        
+        $testdata = array('php');
         $r = new ReflectionObject($this->object);
         $privGetConfig = $r->getMethod('_getConfig');
         $privGetConfig->setAccessible(true);
-        $privGetConfig->invoke($this->object);//,'controllers/enabled');        
-        exit;                     
+        $this->assertEquals($testdata,$privGetConfig->invoke($this->object,'controllers/ext'));                              
+    }
+    
+    /**
+    * @expectedException OutOfBoundsException
+    */
+    public function testPrivateGetConfigDataFail() {        
+        $r = new ReflectionObject($this->object);
+        $privGetConfig = $r->getMethod('_getConfig');
+        $privGetConfig->setAccessible(true);
+        $privGetConfig->invoke($this->object,'noItem');
     }
 
     public function testClearRoutes() {
