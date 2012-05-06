@@ -297,26 +297,7 @@ class router {
 
     public function getControllerMatchActionView($state) {
 
-    }
-
-
- //'ext' => array('php'),
-            /**
-             * Try to match a view to the controller
-             * @var bool
-             */
-   //         'match_controller_view' => true,
-            /**
-             * Try to match a view to the controller's action
-             * @var bool
-             */
-     //       'match_controller_action_view' => true,
-            /**
-             * Name/function of the view class
-             * @var string/function
-             */
-       //     'view_class' => '',
-
+    } 
 
     /**
     * Set the mod rewrite state variable
@@ -345,7 +326,6 @@ class router {
     * @param string/function/array/null $destination - The destination can be null because I set the option to only allow registered routes. 
     *                                      So it might not redirect to any where or have a function/class but just be a normal route to a controller/action file
     *
-    * @throws InvalidRouteTypeException 
     * 
     * @return router
     */
