@@ -1,5 +1,7 @@
 <?php
 
+namespace Router;
+
 
 class router {
 
@@ -138,7 +140,7 @@ class router {
         }
         
         if ($e)
-            throw new OutOfBoundsException($e);
+            throw new \OutOfBoundsException($e);
         
         return $tempSectionData;            
     }
@@ -537,12 +539,8 @@ class router {
 /** 
  * Router exceptions
  */
-class InvalidControllerDirectoryException extends Exception {}
-class NoControllerDirectoryException extends Exception {}
-class InvalidRouteTypeException extends Exception {}
-class NoPathSpecifiedException extends Exception {}
-class PathNotInRouteListException extends Exception {}
-
-class dispatcher {
-
-}
+class InvalidControllerDirectoryException extends \Exception {}
+class NoControllerDirectoryException extends \Exception {}
+class InvalidRouteTypeException extends \Exception {}
+class NoPathSpecifiedException extends \Exception {}
+class PathNotInRouteListException extends \Exception {}
