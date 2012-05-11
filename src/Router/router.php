@@ -42,6 +42,12 @@ class router {
              * @var array
              */
             'dir' => array(),
+            
+            /**
+             * Default action to be called when there is no action specified
+             *@var string 
+             */
+            'default_action' => 'index',
             /**
              * Ext of controllers
              * @var array
@@ -496,6 +502,9 @@ class router {
         if ($this->_getConfig('only_route_entries') && !$this->_isRouteInList) {
             throw new PathNotInRouteListException($route);
         }
+        
+        //Call dispatcher
+        
         
         if (is_callable($route)) {
             $res = $route();
