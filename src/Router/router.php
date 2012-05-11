@@ -504,8 +504,7 @@ class router {
         }
         
         //Call dispatcher
-        
-        
+       
         if (is_callable($route)) {
             $res = $route();
             //dispatch function or array
