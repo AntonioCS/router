@@ -11,7 +11,7 @@ require '../src/Router/router.php';
 class routerTest extends PHPUnit_Framework_TestCase
 {
     /**
-     * @var router
+     * @var Router\router
      */
     protected $object;
     
@@ -273,8 +273,8 @@ class routerTest extends PHPUnit_Framework_TestCase
      * @covers router::run
      * @todo   Implement testRun().
      */
-    public function _testRun() {
-
-
+    public function testRun() {
+        $this->object->addRoute('ALL','/','controler');        
+        $this->object->run('/');
     }
 }
