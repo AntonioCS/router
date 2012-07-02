@@ -11,6 +11,13 @@ class router {
      * @var array
      */
     private $_config = array();
+    
+    /**
+     * This will contain the instance of the router
+     * 
+     * @var router
+     */
+    private static $INSTANCE = null;
 
     /**
      * Default configurations
@@ -121,37 +128,19 @@ class router {
      */
     private function _getConfig($section) {
         $sections = explode('/',$section);
-        $tempSectionData = null;
-        $e = null;        
+        $tempSectionData = $this->_config;
+        //$e = null;        
         
-        foreach ($sections as $currentSection) {
-            if ($tempSectionData) {
-                if (!isset($tempSectionData[$currentSection])) {
-                    $e = $section . ' - ' . $currentSection;
-                    break;
-                }
-                else {
-                    $tempSectionData = $tempSectionData[$currentSection];
-                }
-            }
-            else {
-                if (!isset($this->_config[$currentSection])) {
-                    $e = $section . ' - ' . $currentSection;
-                    break;
-                }
-                else {
-                    $tempSectionData = $this->_config[$currentSection];
-                }
-            }
+        foreach ($sections as $currentSection) {                        
+            if (!isset($tempSectionData[$currentSection])) {
+                throw new \OutOfBoundsException($section . ' - ' . $currentSection);
+            }            
+            $tempSectionData = $tempSectionData[$currentSection];
         }
-        
-        if ($e)
-            throw new \OutOfBoundsException($e);
-        
+                
         return $tempSectionData;            
     }
-    
-    
+       
     /**
      * Check if a type is valid.
      * 
@@ -167,13 +156,15 @@ class router {
         
         if (!isset($valid_route_types[$type])) 
             throw new InvalidRouteTypeException($type);
-        
-        
-        return $type;
-        
+                
+        return $type;        
     }
     
-
+    /**
+     * Class construct
+     * 
+     * @param array $config 
+     */
     public function __construct($config = null) {
         if (!$config)
             $this->_config = self::$CONFIG;
@@ -182,6 +173,20 @@ class router {
         }
     }
 
+    /**
+     * Retrieve the instance of the class
+     * 
+     * @param array $config
+     * 
+     * @return router 
+     */
+    public static function getInstance($config = null) {
+        if (!self::$INSTANCE)
+            self::$INSTANCE = new self($config);
+        
+        return self::$INSTANCE;        
+    }
+    
     /**
      * Enable or Disable the use of file controllers
      *
@@ -443,8 +448,8 @@ class router {
     private function _matchRouteRecursive($routes,$route) {        
         foreach ($routes as $pattern => $value) {
             //var_dump($route,$pattern,$value);
-            //The delimiter must be / for this to work correctly
-            if (!empty($pattern) && $pattern[0] == '/' && preg_match($pattern,$route,$match)) {
+            //The delimiter must be / for this to work correctly         
+            if (!empty($pattern) && strlen($pattern) > 1 && $pattern[0] == '/' && preg_match($pattern,$route,$match)) {
                 $this->_isRouteInList = true;
                         
                 if ($value != null) {
