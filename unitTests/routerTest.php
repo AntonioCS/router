@@ -275,6 +275,6 @@ class routerTest extends PHPUnit_Framework_TestCase
      */
     public function testRun() {
         $this->object->addRoute('ALL','/','controler');        
-        $this->object->run('/');
+        $this->object->run('');
     }
 }
