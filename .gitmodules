@@ -1,0 +1,3 @@
+[submodule "lib/settingsManager"]
+	path = lib/settingsManager
+	url = https://github.com/AntonioCS/settingsManager

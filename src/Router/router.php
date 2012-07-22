@@ -8,7 +8,7 @@ class router {
     /**
      * Where all the configurations will go
      *
-     * @var array
+     * @var mixed     
      */
     private $_config = array();
     
@@ -17,98 +17,7 @@ class router {
      * 
      * @var router
      */
-    private static $INSTANCE = null;
-
-    /**
-     * Default configurations
-     *
-     * @var array
-     */
-    public static $CONFIG = array(
-
-        /**
-         * To only allow routes that are in the route list. 
-         * This is useful if there are controller settings but you still want to 
-         * deny access to controllers that are not in the route list
-         * 
-         * @var bool
-         */
-        'only_route_entries' => false,        
-        /**
-         * File system Controller settings
-         * @var array
-         */
-        'controllers' => array(
-            /**
-             * To search for controllers if no route matched a function or class
-             * @var bool
-             */
-            'enabled' => true,
-            /**
-             * Path to controllers
-             * @var array
-             */
-            'dir' => array(),
-            
-            /**
-             * Default action to be called when there is no action specified
-             *@var string 
-             */
-            'default_action' => 'index',
-            /**
-             * Ext of controllers
-             * @var array
-             */
-            'ext' => array('php'),
-            /**
-             * Try to match a view to the controller
-             * @var bool
-             */
-            'match_controller_view' => true,
-            /**
-             * Try to match a view to the controller's action
-             * @var bool
-             */
-            'match_controller_action_view' => true
-        ),
-        //Routes of the router separated by types
-        'routes' => array(
-            'GET' => array(
-                '' => 'index' //default controller
-            ),
-            'POST' => array(),
-            'PUT' => array(),
-            'DELETE' => array(),
-            'ALL' => array()
-        ),   
-       /**
-        * Valid route types
-        * 
-        * @var array
-        */
-        'valid_route_types' => array(
-            'GET' => 1,
-            'PUT' => 1,
-            'POST' => 1,
-            'DELETE' => 1,
-            'ALL' => 1 //Special case so that a route can be valid in any case
-        ),
-        
-        'modrewrite' => array(
-            'enabled' => true,
-            //if not using modrewrite where to get controller and action
-            'query_string' => array(
-                //All the query string parameters besides these two will be treated as parameters to the action
-                'controller' => 'qc',
-                'action' => 'qa'
-            )
-        ),
-        /**
-         * Name/function of the view class
-         * @var string/function
-         */
-        'view_class' => ''       
-    );
+    private static $INSTANCE = null;   
     
     /**
      * Used to determine if a match was found in the routes list (in case I have the only_route_entries set to true)
@@ -116,31 +25,7 @@ class router {
      * @var bool
      */
     private $_isRouteInList = false;
-    
-    
-    /**
-     * Access the _config property and return specified section
-     * 
-     * @param string $section
-     * @return array/string
-     * 
-     * @throws OutOfBoundsException 
-     */
-    private function _getConfig($section) {
-        $sections = explode('/',$section);
-        $tempSectionData = $this->_config;
-        //$e = null;        
-        
-        foreach ($sections as $currentSection) {                        
-            if (!isset($tempSectionData[$currentSection])) {
-                throw new \OutOfBoundsException($section . ' - ' . $currentSection);
-            }            
-            $tempSectionData = $tempSectionData[$currentSection];
-        }
-                
-        return $tempSectionData;            
-    }
-       
+               
     /**
      * Check if a type is valid.
      * 
@@ -150,14 +35,14 @@ class router {
      *      
      * @throws InvalidRouteTypeException 
      */
-    private function _isValidRouteType($type) {
-        $valid_route_types = $this->_getConfig('valid_route_types');        
+    private function _isValidRouteType($type) {       
+        $valid_route_types = $this->_config->fetch('valid_route_types');        
         $type = strtoupper($type);
         
-        if (!isset($valid_route_types[$type])) 
-            throw new InvalidRouteTypeException($type);
-                
-        return $type;        
+        if (isset($valid_route_types[$type]) && $valid_route_types[$type]) 
+            return $type;
+        
+        throw new InvalidRouteTypeException($type);                        
     }
     
     /**
@@ -166,11 +51,11 @@ class router {
      * @param array $config 
      */
     public function __construct($config = null) {
-        if (!$config)
-            $this->_config = self::$CONFIG;
-        else {
-            $this->_config = array_merge(self::$CONFIG,$config);
+        if (!$config) {
+            throw new NoConfigurationsSetException();
         }
+                
+        $this->_config = $config;
     }
 
     /**
@@ -191,8 +76,9 @@ class router {
      * Enable or Disable the use of file controllers
      *
      * @param bool $state
-     *
+     * 
      * @return router
+     * 
      */
     public function setControllersState($state) {
         $this->_config['controllers']['enabled'] = $state;
@@ -216,16 +102,17 @@ class router {
     *
     * @throws InvalidControllerDirectoryException
     */
-    public function setControllersDir($dir) {
-        if (!isset($this->_config['controllers']['dir']))
-            $this->_config['controllers']['dir'] = array();
+    public function setControllersDir($dir, $module = 'default') {
+        //if (!isset($this->_config['controllers']['dir']))
+            //$this->_config['controllers']['dir'] = array();
 
         foreach ((array)$dir as $dirCheck) {
             if (!is_dir($dirCheck))
                 throw new InvalidControllerDirectoryException($dirCheck);
         }
 
-        $this->_config['controllers']['dir'] = array_merge($this->_config['controllers']['dir'],(array)$dir);
+        //$this->_config['controllers']['dir'] = array_merge($this->_config['controllers']['dir'],(array)$dir);
+        $this->_config->mergeValue("modules/$module/controllers/dir",(array)$dir);
         return $this;
     }
 
@@ -234,8 +121,8 @@ class router {
     *
     * @return array
     */
-    public function getControllerDir() {
-        return $this->_config['controllers']['dir'];
+    public function getControllerDir($module = 'default') {
+        return $this->_config->fetch("modules/$module/controllers/dir");
     }
 
     /**
@@ -245,17 +132,13 @@ class router {
     * 
     * @return router
     */
-    public function addControllerExt($ext) {
+    public function addControllerExt($ext,$module = 'default') {
         if (is_array($ext)) {
             foreach ($ext as $e)
-                $this->addControllerExt ($e);
+                $this->addControllerExt($e);
         }
-        else {
-            if (!isset($this->_config['controllers']['ext']))
-                $this->_config['controllers']['ext'] = array();
-            
-            if (in_array($ext, $this->_config['controllers']['ext']) === false)        
-                array_push($this->_config['controllers']['ext'],$ext);
+        else {            
+            $this->_config->mergeValue("modules/$module/controllers/ext",(array)$ext);
         }
         
         return $this;
@@ -268,21 +151,11 @@ class router {
     *
     * @return router
     */
-    public function delControllerExt($ext) {
-        if (is_array($ext)) {
-            foreach ($ext as $e)
-                $this->delControllerExt($e);
-        }
-        else {
-            foreach ($this->_config['controllers']['ext'] as $k => $e) {
-                if ($e == $ext) {
-                    unset($this->_config['controllers']['ext'][$k]);
-                    break;
-                }
-            }
-
-            return $this;
-        }
+    public function delControllerExt($ext,$module = 'default') {
+        $key = "modules/$module/controllers/ext";        
+        $existing_ext = $this->_config->fetch($key);
+        
+        $this->_config->setValue($key,array_diff($existing_ext,(array)$ext));                
     }
 
     /**
@@ -290,8 +163,8 @@ class router {
     *
     * @returns router
     */
-    public function clearControllerExt() {
-        $this->_config['controllers']['ext'] = array();
+    public function clearControllerExt($module = 'default') {
+        $this->_config->setValue("modules/$module/controllers/ext",array());
         return $this;
     }
 
@@ -342,24 +215,18 @@ class router {
     * 
     * @return router
     */
-    public function addRoute($type,$route,$destination = null) {
+    public function addRoute($type,$routeName,$route = null,$destination = null) {
 
-        if (is_array($route)) {
-            foreach ($route as $k => $v) {      
-                $this->addRoute($type,$k,$v);
+        if (is_array($routeName)) {
+            foreach ($routeName as $rName => $v) { 
+                $route = current(array_keys($v));
+                $dest = $v[$route];
+                $this->addRoute($type,$rName,$route,$dest);
             }
         }
-        else {
-            if (!isset($this->_config['routes']))
-                $this->_config['routes'] = array();
-            
-            $type = $this->_isValidRouteType($type);            
-            
-            if (!isset($this->_config['routes'][$type])) {                                                                        
-                $this->_config['routes'][$type] = array();
-            }
-
-            $this->_config['routes'][$type][$route] = $destination;
+        else {            
+            $type = $this->_isValidRouteType($type);                        
+            $this->_config->setValue("routes/$type/$routeName/$route", $destination);                  
         }
         
         return $this;
@@ -376,17 +243,9 @@ class router {
      * 
      * @return array
      */
-    public function getRoutes($type = null) {
-        $routes = $this->_getConfig('routes');
-        
-        if ($type) {  
-            $type = $this->_isValidRouteType($type);
-                        
-            if (!isset($routes[$type]))
-                return null;
-            
-            return $routes[$type];
-        }
+    public function getRoutes($type = null, $name = null) {
+        $type = ($type ? $this->_isValidRouteType($type) : null);
+        $routes = $this->_config->fetch("routes/$type/$name");
         
         return $routes;
     }
@@ -396,8 +255,16 @@ class router {
     *
     * @return router
     */
-    public function clearRoutes() {
-        $this->_config['routes'] = array();
+    public function clearRoutes() {        
+        $this->_config->setValue('routes', 
+                                    array(
+                                        'GET' =>  array(),
+                                        'POST' => array(),
+                                        'PUT' => array(),
+                                        'DELETE' => array(),
+                                        'ALL' => array()
+                                    )
+                                );
         return $this;
     }
 
@@ -419,7 +286,7 @@ class router {
                 $route = $this->_matchRouteRecursive($routes, $route);
             }
             else {
-                $types = array_keys($this->_getConfig('valid_route_types'));
+                $types = array_keys($this->_config->fetch('valid_route_types'));
                 $newroute = null;
                                 
                 foreach ($types as $route_type) {  
@@ -504,7 +371,7 @@ class router {
         $route = $this->matchRoute($path,$type);                
         $res = null;
         
-        if ($this->_getConfig('only_route_entries') && !$this->_isRouteInList) {
+        if ($this->_config->fetch('only_route_entries') && !$this->_isRouteInList) {
             throw new PathNotInRouteListException($route);
         }
         
@@ -552,6 +419,7 @@ class router {
 /** 
  * Router exceptions
  */
+class NoConfigurationsSetException extends \Exception {}
 class InvalidControllerDirectoryException extends \Exception {}
 class NoControllerDirectoryException extends \Exception {}
 class InvalidRouteTypeException extends \Exception {}
