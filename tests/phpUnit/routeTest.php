@@ -3,7 +3,9 @@
 if (function_exists('xdebug_disable'))
     xdebug_disable();
 
-require '../../src/Router/route.php';
+require '../../src/Router/Routes/route.php';
+require '../../src/Router/Routes/routeDynamic.php';
+require '../../src/Router/Routes/routeStatic.php';
 
 
 /**
@@ -11,31 +13,60 @@ require '../../src/Router/route.php';
  */
 class routeTest extends PHPUnit_Framework_TestCase
 {
-    /**
-     * @var Router\router
-     */
-    protected $object;
-    
-    /**
-     * @var SettingsManager\settingsManager 
-     */
-    protected static $config = null;
-    
-    public static function setUpBeforeClass()
-    {
-        $env = getenv('ENV') ?: 'dev';
-        require "../../config/config.$env.php";                
-        
-        //self::$config = new SettingsManager\settingsManager($routerConfig,true);                
-    }
 
-    protected function setUp() {        
-        //$this->object = new Router\
+    protected function setUp() {              
     }
     
-    public function testMatch() {
-        $x = new Router\route('ola');
+    public function testStaticRouteMatch() {
+        $x = new Router\Routes\routeStatic('index');
         
-        $this->assertTrue($x->match('ola'));
+        $this->assertTrue($x->match('index'));
     }
+    
+    public function testRouteOptions() {
+        $options = array(
+            'module' => 'default',
+            'controller' => 'index',
+            'action' => ''
+        );
+        $x = new Router\Routes\route('', $options);                
+        
+        //var_dump($options,$x->getOptions());
+        //var_dump(array_diff($options,$x->getOptions()));
+        $this->assertTrue(!count(array_diff($options,$x->getOptions())));
+    }
+    
+    
+    public function testDynamicRouteGeneration() {
+        $x = new Router\Routes\routeDynamic('user/:username');
+        
+        $this->assertTrue("user/(\S+)" == $x->getPattern());
+    }
+    
+    public function testDynamicRouteMatch() {
+        $x = new Router\Routes\routeDynamic('user/:username/blablabla/:number');                
+        
+        $this->assertTrue($x->match('user/antoniocs/blablabla/1234'));        
+    }
+    public function testDynamicRouteMatchOptions() {
+        
+        $x = new Router\Routes\routeDynamic('user/:username/blablabla/:number');        
+        $x->match('user/antoniocs/blablabla/1234');        
+        
+        $options = $x->getOptions();
+        $this->assertTrue($options['params']['username'] == 'antoniocs');
+        $this->assertTrue($options['params']['number'] == '1234');
+    }
+    
+    //The route will have little to do with Anonymous Functions or Classes this is just so that I can test that everything goes well when I assign them to the routes
+    public function testRouteAnonymousFunctionsPassing() {
+        $x = new Router\Routes\routeStatic('index', function() { echo 'hello'; });
+        $this->assertTrue($x->match('index'));                
+    }
+    
+    public function testRouteClassPassing() {
+        $x = new Router\Routes\routeStatic('index',array('class' => array('classname','method')));
+        $this->assertTrue($x->match('index'));                
+    }
+    
 }
