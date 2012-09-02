@@ -48,7 +48,7 @@ class router {
     /**
      * Class construct
      * 
-     * @param array $config 
+     * @param array $config      
      */
     public function __construct($config = null) {
         if (!$config) {
@@ -81,7 +81,7 @@ class router {
      * 
      */
     public function setControllersState($state) {
-        $this->_config['controllers']['enabled'] = $state;
+        //$this->_config->setValue(['controllers']['enabled'] = $state;
         return $this;
     }
 
@@ -103,8 +103,6 @@ class router {
     * @throws InvalidControllerDirectoryException
     */
     public function setControllersDir($dir, $module = 'default') {
-        //if (!isset($this->_config['controllers']['dir']))
-            //$this->_config['controllers']['dir'] = array();
 
         foreach ((array)$dir as $dirCheck) {
             if (!is_dir($dirCheck))
@@ -205,29 +203,19 @@ class router {
     }
 
     /**
-    * Create a new route in the 
+    * Add new route to route list
     *
     * @param string $type GET/PUT/DELETE/POST/ALL - REQUEST_METHOD
-    * @param string/array $route - REQUEST_URI/QUERY_STRING
-    * @param string/function/array/null $destination - The destination can be null because I set the option to only allow registered routes. 
-    *                                      So it might not redirect to any where or have a function/class but just be a normal route to a controller/action file
+    * @param string|array $routeName - Name for the route
+    * @param string|array|Routes\Route $route 
     *
-    * 
+    * @todo Correct ALL problem. The all should not have a place in the routes array. Routes with all type should be put in all route types
     * @return router
-    */
-    public function addRoute($type,$routeName,$route = null,$destination = null) {
-
-        if (is_array($routeName)) {
-            foreach ($routeName as $rName => $v) { 
-                $route = current(array_keys($v));
-                $dest = $v[$route];
-                $this->addRoute($type,$rName,$route,$dest);
-            }
-        }
-        else {            
-            $type = $this->_isValidRouteType($type);                        
-            $this->_config->setValue("routes/$type/$routeName/$route", $destination);                  
-        }
+    */    
+    public function addRoute($type,$routeName,$route) {
+        
+        $type = $this->_isValidRouteType($type);                        
+        $this->_config->setValue("routes/$type/$routeName", $route);                  
         
         return $this;
     }    
@@ -244,10 +232,10 @@ class router {
      * @return array
      */
     public function getRoutes($type = null, $name = null) {
-        $type = ($type ? $this->_isValidRouteType($type) : null);
-        $routes = $this->_config->fetch("routes/$type/$name");
+        $type = ($type ? $this->_isValidRouteType($type) : 'ALL');
+        $fetchPath = "routes/$type" . ($name ? "/$name" : null);
         
-        return $routes;
+        return $this->_config->fetch($fetchPath);                
     }
     
     /**
@@ -273,74 +261,28 @@ class router {
     *
     * @param mixed $route
     * @param string $type 
+    * 
+    * @return string|\Router\Routes\route Return the matching route object or if there is no match return the route string
     */
-    public function matchRoute($route, $type = null) {                    
-        $routes = $this->getRoutes($type);        
-        
-        if (!empty($routes)) {
-            if ($type) {
-                $all = $this->getRoutes('all');
-                if (!empty($all))
-                    $routes = array_merge($routes,$all);                
-                
-                $route = $this->_matchRouteRecursive($routes, $route);
-            }
-            else {
-                $types = array_keys($this->_config->fetch('valid_route_types'));
-                $newroute = null;
+    public function matchRoute($route, $type = 'all') {                    
+        $routes = $this->getRoutes($type);
+        $this->_isRouteInList = false;
                                 
-                foreach ($types as $route_type) {  
-                    if (!isset($routes[$route_type]))
-                        continue;
-                    
-                    $newroute = $this->_matchRouteRecursive($routes[$route_type], $route);
-                    if ($newroute != $route || $this->_isRouteInList) {                      
-                        $route = $newroute;
-                        break;
-                    }                    
+        if (!empty($routes)) {
+            foreach ($routes as $routeName => $currentRoute) {
+                if ($currentRoute->match($route)) {
+                    $this->_isRouteInList = true;
+                    $route = $currentRoute->getOptions();
+                    break;
                 }
-            }
+            }                        
         }
+        else
+            throw new NoRoutesException();
 
         return $route;
     }
     
-    /**
-     * Match the route to a given set of routes (used with matchRoute)
-     * 
-     * @param array $routes - Routes of a specific type (GET, POST etc..)
-     * @param string $route
-     * @return string
-     */
-    private function _matchRouteRecursive($routes,$route) {        
-        foreach ($routes as $pattern => $value) {
-            //var_dump($route,$pattern,$value);
-            //The delimiter must be / for this to work correctly         
-            if (!empty($pattern) && strlen($pattern) > 1 && $pattern[0] == '/' && preg_match($pattern,$route,$match)) {
-                $this->_isRouteInList = true;
-                        
-                if ($value != null) {
-                    if (!is_callable($value) && !is_array($value)) {
-                        //if matched test/(\d+) to test/$1
-                        $route = preg_replace($pattern,$value,$route);
-                    }
-                    else
-                        $route = $value;
-                }
-                break;
-            }
-            elseif ($pattern == $route) {
-                $this->_isRouteInList = true;
-                
-                if ($value != null)
-                    $route = $value;
-                
-                break;
-            }
-        }
-
-        return $route;
-    }
 
     /**
     * Run the given path
@@ -350,46 +292,37 @@ class router {
     *
     * If null the current url will be used
     */
-    public function run($path = null, $type = null) {
+    public function run($path = null, $type = 'GET') {
         if ($path === null) {
             if (isset($_SERVER) && isset($_SERVER['QUERY_STRING'])) {
                 //In an mvc environment the index.php gets all the requests so I only need the query string part
-                $path = str_replace(chr(0),'',$_SERVER['QUERY_STRING']); //Nul byte protection - http://hakipedia.com/index.php/Poison_Null_Byte
+                $path =$_SERVER['QUERY_STRING']; //Nul byte protection - http://hakipedia.com/index.php/Poison_Null_Byte
             }
             else {
                 throw new NoPathSpecifiedException();
             }
         }        
         
+        //http://hakipedia.com/index.php/Poison_Null_Byte
+        $path = str_replace(chr(0),'',$path);
+        
         if (!$type) {
             if (isset($_SERVER) && isset($_SERVER['REQUEST_METHOD'])) {
                 $type = $_SERVER['REQUEST_METHOD'];
             }            
-        }
-        
+            else 
+                $type = 'GET';
+        }        
         
         $route = $this->matchRoute($path,$type);                
-        $res = null;
-        
-        if ($this->_config->fetch('only_route_entries') && !$this->_isRouteInList) {
-            throw new PathNotInRouteListException($route);
-        }
-        
-        //Call dispatcher
-       
-        if (is_callable($route)) {
-            $res = $route();
-            //dispatch function or array
-        }
-        elseif (is_array($route)) {
-            
-        }
-        else {
-            ////dispatch file system route if found
-            //http://hakipedia.com/index.php/Poison_Null_Byte
-            //Use $file = str_replace(chr(0), '', $string);          
-        }
 
+        if ($this->_config->fetch('only_route_entries') && !$this->_isRouteInList) {
+            throw new PathNotInRouteListException($path);
+        }
+        
+        //Call dispatcher 
+        $d = new \Router\dispatcher($route,$this->_config->fetch('modules'));        
+        $d->dispatch();
     }
 
     /**
@@ -408,12 +341,6 @@ class router {
     public function getView() {
 
     }
-
-
-
-    public function loadcontroller($controller) {
-    }
-
 }
 
 /** 
@@ -425,3 +352,4 @@ class NoControllerDirectoryException extends \Exception {}
 class InvalidRouteTypeException extends \Exception {}
 class NoPathSpecifiedException extends \Exception {}
 class PathNotInRouteListException extends \Exception {}
+class NoRoutesException extends \Exception {}
