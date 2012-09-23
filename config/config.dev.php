@@ -16,6 +16,9 @@ $routerConfig = array();
 */
 $routerConfig['only_route_entries'] = false;
 
+
+$routerConfig['modules_default_module'] = 'default';
+
 /**
 * Container of the modules
 * 
@@ -43,6 +46,13 @@ $routerConfig['modules']['default']['controllers']['enabled'] = true;
 * @var array
 */
 $routerConfig['modules']['default']['controllers']['dir'] = array();
+
+/**
+ * Default controller tocall
+ * @var string
+ */
+$routerConfig['modules']['default']['controllers']['default_controller'] = 'index';
+
 /**
 * Default action to be called when there is no action specified
 *@var string 
@@ -52,7 +62,7 @@ $routerConfig['modules']['default']['controllers']['default_action'] = 'index';
 * Ext of controllers
 * @var array
 */
-$routerConfig['modules']['default']['controllers']['ext'] =  array('php');
+$routerConfig['modules']['default']['controllers']['ext'] = array('php');
 /**
 * Try to match a view to the controller
 * @var bool
