@@ -272,7 +272,7 @@ class router {
             foreach ($routes as $routeName => $currentRoute) {
                 if ($currentRoute->match($route)) {
                     $this->_isRouteInList = true;
-                    $route = $currentRoute->getOptions();
+                    $route = $currentRoute;
                     break;
                 }
             }                        
