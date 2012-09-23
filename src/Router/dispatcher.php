@@ -3,117 +3,260 @@
 namespace Router;
 
 class dispatcher {
-               
+    
+    /**
+     *
+     * @var string
+     */
+    private $_module = null;
+    /**
+     * Class name of the controller (and also the file name)
+     * @var string
+     */
+    private $_controller = null;
+    /**
+     * File path of where the controller class is located
+     * @var string
+     */
+    private $_controllerFile = null;
+    /**
+     *
+     * @var string
+     */
+    private $_action = null;
+    /**
+     *
+     * @var array
+     */
+    private $_params = null;
+
+
+    /**
+     *
+     * @var array
+     */
     private $_modulesData = array();
     
+    /**
+     *
+     * @var string|\Router\Routes\route
+     */
     private $_route = null;
     
+    /**
+     *
+     * @var string
+     */
+    private $_defaultModule = null;
+        
+    /**
+     * 
+     * @param string|\Router\Routes\route $route
+     * @param array $modData All modules data
+     */
+    public function __construct($route, array $modData, $defaultModule = 'default') {            
+        $this->setRoute($route);
+        $this->setModulesData($modData);
+        $this->_defaultModule = $defaultModule;
+    }
     
     /**
      * 
      * @param string|\Router\Routes\route $route
-     * @param array $modData
+     * @return \Router\dispatcher
      */
-    public function __construct($route, array $modData) {            
+    public function setRoute($route) {
         $this->_route = $route;
-        $this->_modulesData = $modData;                
+        return $this;
     }
     
-    
-    public function dispatch($route = null) {
+    /**
+     * 
+     * @param array $modData
+     * @return \Router\dispatcher
+     */
+    public function setModulesData(array $modData) {
+        $this->_modulesData = $modData;
+        return $this;
+    }
+
+    /**
+     * 
+     * @param string $route
+     * 
+     * @throws NoRouteSetException
+     * @throws InvalidClassPathException
+     */
+    public function dispatch($route = null) {                
         
         if (!$route) {
-            if (!$this->_route) {
+            if ($this->_route === null) {
                 throw new NoRouteSetException;
             }
             
             $route = $this->_route;
         }
             
-        $module = null;
-        $controller = null;
-        $action = null;
-        $params = null;
+        $this->_module = null;
+        $this->_controller = null;
+        $this->_controllerFile = null;
+        $this->_action = null;
+        $this->_params = array();
                 
-        if (is_array($route)) {
-            if (isset($route['func']) && is_callable($route['func'])) {                
-                $action = $route['func'];
+        if ($route instanceof \Router\Routes\route) {
+            $options = $route->getOptions();
+            
+            //The route is a function
+            if (isset($options['func']) && is_callable($options['func'])) {
+                //$this->_module = 'customFunction';                
+                $this->_action = $route['func'];
             }            
             
-            if (isset($route['class']) && is_array($route['class']) && count($route['class'] > 1)) {
-                if (isset($route['class'][2])) {
-                    $fileClassPath = $route['class'][2];
-                    if (!is_file($fileClassPath)) {
+            //The route is a class
+            elseif (isset($options['class']) && is_array($options['class']) && count($options['class']) > 1) {
+                $className = $options['class'][0];
+                $classFile = isset($options['class'][1]) ? $options['class'][1] : null;
+                
+                if ($classFile) {                    
+                    if (!is_file($classFile)) {
                         throw new InvalidClassPathException;
                     }
                     
-                    $this->_modulesData['customClass'] = $fileClassPath;                    
+                    $this->_controllerFile = $classFile;
+                }
+                //If there is no class file the class must already be loaded
+                else {
+                    if (!class_exists($className)) {
+                        throw new InvalidClassException;
+                    }
                 }
                     
-                $module = 'customClass';
-                $controller = $route['class'][0];
-                $action = $route['class'][1];                
+                $this->_controller = $className;
+                $this->_action = $options['action'] ?: $this->_modulesData[$this->_defaultModule]['controllers']['default_action'];
             }
+            //Normal route            
+            else {                             
+                $this->_module = $options['module'] ?: $this->_defaultModule;                                    
+                $this->_controller = $options['controller'] ?: $this->_modulesData[$this->_defaultModule]['controllers']['default_controller'];
+                                
+                $this->_controllerFile = 
+                        $this->findControllerPath(
+                                $this->_controller, 
+                                (array)$this->_modulesData[$this->_module]['controllers']['dir'], 
+                                (array)$this->_modulesData[$this->_module]['controllers']['ext']
+                        );
+                $this->_action = $options['action'] ?: $this->_modulesData[$this->_defaultModule]['controllers']['default_action'];
+            }            
             
-            //else get data
-            
-        } 
-        else {
+            $this->_params = $options['params'] ?: array();
+        }         
+        //The route is a string and we have to figure out module, controller, action and params
+        else {            
             $segments = explode('/',$route);
+            clearstatcache();
             
-            while (true) {
+            while (count($segments)) {
                 foreach ($segments as $k => $segment) {
                     switch (null) {
-                        case $module:
+                        case $this->_module:
                             if (isset($this->_modulesData[$segment])) {
-                                $module = $segment;
-                                array_shift($segment);                                
+                                $this->_module = $segment;
+                                array_shift($segments);                                
                             }                         
                             
                             break 2;
                         break;
-                        case $controller:
-                            if ($module) {
-                                $dirs = $this->_modulesData[$module]['controllers']['dir'];
-                                $exts = $this->_modulesData[$module]['controllers']['ext'];
+                        case $this->_controller:
+                            if ($this->_module) {
+                                $dirs = (array)$this->_modulesData[$this->_module]['controllers']['dir'];
+                                $exts = (array)$this->_modulesData[$this->_module]['controllers']['ext'];
                                 
-                                foreach ($dirs as $dir) {
-                                    foreach ($exts as $ext) {
-                                        $controller = $dir . '/' .$segment . '.' . $ext;
-                                        
-                                        if (!is_file($controller)) {
-                                            $controller = null;                                            
-                                        }
-                                        else {
-                                            $segments = array_slice($segments,$k+1);
-                                            break 2;
-                                        } 
-                                    }
-                                }                                
+                                $controllerPath = $this->findControllerPath($segment, $dirs, $exts);
+                                
+                                if ($controllerPath) {
+                                    $this->_controller = $segment;
+                                    $this->_controllerFile = $controllerPath;
+                                    $segments = array_slice($segments,$k+1);
+                                    break 2;
+                                }                                      
                             }                            
                         break;
-                        case $action:
-                            if ($module && $controller) {
-                                $action = $segment;
+                        case $this->_action:
+                            if ($this->_module && $this->_controller) {
+                                $this->_action = $segment;
                                 array_shift($segments);
                                 
-                                $params = $segments;
+                                $this->_params = $segments;
                                 break 2;
                             }
                         break;
                     }
                 }
                 
-                if (!$module)
-                    $module = 'default';
                 
-                if ($module && $controller && $action)
+                
+                if ($this->_module && !$this->_controller) {                    
+                    $this->_controller = $this->_modulesData[$this->_module]['controllers']['default_controller'];
+                }
+                             
+                if (!$this->_module) {
+                    $this->_module = $this->_defaultModule;
+                }
+
+                if ($this->_module && $this->_controller && $this->_action){                    
+                    if (!empty($this->_params)) {
+                        $params = array();
+                        $pkey = null;
+                        
+                        foreach ($this->_params as $k => $p) {                            
+                            if (!($k & 1)) {
+                                $pkey = $p;                                
+                            }
+                            else {
+                                $params[$pkey] = $p;
+                            }                            
+                        }
+                        $this->_params = $params;
+                        
+                        //Catch any missing parameters
+                        if (!isset($this->_params[$pkey])) {
+                            $this->_params[$pkey] = null;
+                        }
+                    }
                     break;
+                }
+            }
+        }               
+    }
+    
+    /**
+     * Try and find the controller in the selected modules dir
+     * 
+     * @param string $controllerPath File name (without extension)
+     * @param array $dirs Directories to search in
+     * @param array $exts Possible extensions of file
+     */
+    private function findControllerPath($controller, array $dirs, array $exts) {
+
+        $controllerPath = null;
+        
+        foreach ($dirs as $dir) {
+            foreach ($exts as $ext) {
+                $controllerPath = $dir . $controller . '.' . $ext;
+
+                if (is_file($controllerPath)) {
+                    break 2;
+                }
+                
+                $controllerPath = null;
             }
         }
+        
+        return $controllerPath;
     }
 }
 
 
 class NoRouteSetException extends \Exception {}
 class InvalidClassPathException extends \Exception {}
+class InvalidClassException extends \Exception {}
