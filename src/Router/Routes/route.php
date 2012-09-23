@@ -14,13 +14,13 @@ class route {
      * @var array
      */
     protected $_options = array(
-        'module' => null,
-        'controller' => null,
+        'module' => null,        
+        'controller' => null, //Class name and file name
         'action' => null,        
         'func' => null,
         /**
          * Must be in the format 
-         * class => array('ClassName','ClassMethod',[if class not loaded, path to file]);
+         * class => array('ClassName',[if class not loaded, path to file]);
          */
         'class' => array(),
         'params' => null
