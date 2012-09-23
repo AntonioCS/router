@@ -81,8 +81,7 @@ class routerTest extends PHPUnit_Framework_TestCase
                 'action' => ''
             )
         );
-        $this->object->addRoute('get','teste',$newRoute);
-        
+        $this->object->addRoute('get','teste',$newRoute);        
         $this->assertEquals($this->getRouteObjectConfigData()->fetch("routes/GET/teste"),$newRoute); 
         
         return $newRoute;
