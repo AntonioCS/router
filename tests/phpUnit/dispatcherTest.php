@@ -71,7 +71,7 @@ class routeTest extends PHPUnit_Framework_TestCase
                 array(
                     'enabled' => true,
                     'dir' => '',
-                    'default_controller' => '',
+                    'default_controller' => 'default',
                     'default_action' => 'index',
                     'ext' => 'php',
                     'match_controller_view' => '',
@@ -98,43 +98,137 @@ class routeTest extends PHPUnit_Framework_TestCase
     */
     public function testRouteDispatchFail() {        
         $d = new \Router\dispatcher(null,array());
-        $d->dispatch();
+        $d->map();
     }
     
+    /**
+     * @group StringRoute
+     */
+    public function testRouteStringMap() {        
+        $this->_object->map("other/controller/action");             
+        $this->assertDispatcherInternalValues('other','controller',$this->_modData['other']['controllers']['dir'] . 'controller.php','action',array());
+    }        
     
-    public function _testRouteStringDispatch() {        
-        $this->_object->dispatch("other/controller/action/param1/param1value/param2/param2value");             
-        $this->assertDispatcherInternalValues('default','controller.php','controller','action',array());        
+    /**
+     * @group StringRoute
+     */    
+    public function testRouteStringMapDirectCall() {
+        $this->_object->mapStringRoute("other/controller/action");
+        $this->assertDispatcherInternalValues('other','controller',$this->_modData['other']['controllers']['dir'] . 'controller.php','action',array());
     }
     
-    public function testRouteObjectDispatchStatic() {
+    /**
+     * Module Only 
+     * http://example/other 
+     * @group StringRoute
+     */    
+    public function testRouteStringModuleOnly() {
+        $this->_object->map("other");
+        $this->assertDispatcherInternalValues('other','default',$this->_modData['other']['controllers']['dir'] . 'default.php','index',array());
+    }
+    
+    /**
+     * Invalid module maps to controller name 
+     * http://example/controller
+     * @group StringRoute
+     */    
+    public function testRouteStringMapToDefaultModule() {
+        $this->_object->map("controller");
+        $this->assertDispatcherInternalValues('default','controller',$this->_modData['default']['controllers']['dir'] . 'controller.php','index',array());
+    }
+    
+    /**
+     * Invalid module map to controller name with action:
+     * http://example/controller
+     * @group StringRoute
+     */    
+    public function testRouteStringMapToDefaultModuleWithControllerAction() {
+        $this->_object->map("controller/action");
+        $this->assertDispatcherInternalValues('default','controller',$this->_modData['default']['controllers']['dir'] . 'controller.php','action',array());
+    }
+        
+    /**
+     * Invalid module map to controller name with action and params:
+     * http://example/controller
+     * @group StringRoute
+     */    
+    public function testRouteStringMapToDefaultModuleWithControllerActionAndParams() {
+        $this->_object->map("controller/action/param1/param1value/param2/param2value/param3");
+        $this->assertDispatcherInternalValues('default','controller',$this->_modData['default']['controllers']['dir'] . 'controller.php','action',array(
+            'param1' => 'param1value',
+            'param2' => 'param2value',                
+            'param3' => null
+        ));
+    }
+    
+    /**
+     * Module + controller
+     * http://example/other/controller     
+     * @group StringRoute
+     */    
+    public function testRouteStringMapModuleController() {
+        $this->_object->map("other/controller");
+        $this->assertDispatcherInternalValues('other','controller',$this->_modData['other']['controllers']['dir'] . 'controller.php','index',array());
+    }
+        
+    /**
+     * Module + controller + action:
+     * http://example/other/controller/action
+     * @group StringRoute
+     */    
+    public function testRouteStringMapModuleControllerAction() {
+        $this->_object->map("other/controller/action");
+        $this->assertDispatcherInternalValues('other','controller',$this->_modData['other']['controllers']['dir'] . 'controller.php','action',array());
+    }    
+    /**
+     * Module + controller + action + params 
+     * http://example/other/controller/action/param1/param1value/param2/param2value 
+     * @group StringRoute
+     */
+    public function testRouteStringMapModuleControllerActionParams() {
+        $this->_object->map("other/controller/action/param1/param1value/param2/param2value");
+        $this->assertDispatcherInternalValues('other','controller',$this->_modData['other']['controllers']['dir'] . 'controller.php','action',array(
+            'param1' => 'param1value',
+            'param2' => 'param2value'
+        ));
+    }
+    
+    /**
+     * @expectedException \Router\ControllerFileNotFound
+     * @group StringRoute     
+    */
+    public function testeRouteStringMapUnknownController() {
+        $this->_object->map("UnknownController/action");
+    }
+    
+    /**
+     * @group RouteObject
+     */
+    public function _testRouteObjectMapStatic() {
         $r = new \Router\Routes\routeStatic('test/teste1', array(
             'module' => 'other',
             'controller' => 'controller'            
         ));
                 
-        $this->_object->dispatch($r);
-        
-        $this->assertDispatcherInternalValues('other','controller','controller.php','index',array(),true);        
-        
-        //$v = $this->_getVars();        
-        //var_dump($v);
+        $this->_object->map($r);        
+        $this->assertDispatcherInternalValues('other','controller',$this->_modData['other']['controllers']['dir'] . 'controller.php','index',array(),false);
     }
     
-    public function _testeRouteObjectDispatchDynamic() {
+    /**
+     * @group RouteObject
+     */
+    public function _testeRouteObjectMapDynamic() {
         $r = new \Router\Routes\routeDynamic('test/teste1/:username', array(
             'module' => 'other',
-            'controller' => 'controller'            
+            'controller' => 'controller'
         ));
         
         $r->match('test/teste1/antonio');
         
         //var_dump('options -> ' , $r->getOptions());
-        $this->_object->dispatch($r);
-        $v = $this->_getVars();        
+        $this->_object->map($r);
+        $v = $this->_getVars();
         var_dump($v);
-        
-        
     }
     
     /**
@@ -153,11 +247,9 @@ class routeTest extends PHPUnit_Framework_TestCase
             var_dump($v);
         }
         
-        $returnedControllerValue = $v['controllerFile'] ? basename($v['controllerFile']) : null;
-        
         $this->assertEquals($v['module'],$module);
         $this->assertEquals($v['controller'],$controller);
-        $this->assertEquals($returnedControllerValue,$controllerFile);
+        $this->assertEquals($v['controllerFile'],$controllerFile);
         $this->assertEquals($v['action'],$action);
         $this->assertEquals($v['params'],$params);
     }
