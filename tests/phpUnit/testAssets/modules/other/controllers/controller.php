@@ -1,13 +1,13 @@
 <?php
 
 
-class controler {
+class controlerController {
 
-    public function index() {
+    public function indexAction() {
 
     }
 
-    public function action() {
+    public function actionAction() {
 
     }
 }
