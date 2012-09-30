@@ -204,7 +204,7 @@ class routeTest extends PHPUnit_Framework_TestCase
     /**
      * @group RouteObject
      */
-    public function _testRouteObjectMapStatic() {
+    public function testRouteObjectMapStatic() {
         $r = new \Router\Routes\routeStatic('test/teste1', array(
             'module' => 'other',
             'controller' => 'controller'            
@@ -217,7 +217,7 @@ class routeTest extends PHPUnit_Framework_TestCase
     /**
      * @group RouteObject
      */
-    public function _testeRouteObjectMapDynamic() {
+    public function testeRouteObjectMapDynamic() {
         $r = new \Router\Routes\routeDynamic('test/teste1/:username', array(
             'module' => 'other',
             'controller' => 'controller'
@@ -227,8 +227,9 @@ class routeTest extends PHPUnit_Framework_TestCase
         
         //var_dump('options -> ' , $r->getOptions());
         $this->_object->map($r);
-        $v = $this->_getVars();
-        var_dump($v);
+        $this->assertDispatcherInternalValues('other','controller',$this->_modData['other']['controllers']['dir'] . 'controller.php','index',array(
+            'username' => 'antonio'
+        ));       
     }
     
     /**
