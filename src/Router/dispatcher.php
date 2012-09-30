@@ -87,7 +87,7 @@ class dispatcher {
      * @throws NoRouteSetException
      * @throws InvalidClassPathException
      */
-    public function dispatch($route = null) {                
+    public function map($route = null) {                
         
         if (!$route) {
             if ($this->_route === null) {
@@ -97,11 +97,7 @@ class dispatcher {
             $route = $this->_route;
         }
             
-        $this->_module = null;
-        $this->_controller = null;
-        $this->_controllerFile = null;
-        $this->_action = null;
-        $this->_params = array();
+        $this->setToNullProperties();
                 
         if ($route instanceof \Router\Routes\route) {
             $options = $route->getOptions();
@@ -113,7 +109,7 @@ class dispatcher {
             }            
             
             //The route is a class
-            elseif (isset($options['class']) && is_array($options['class']) && count($options['class']) > 1) {
+            elseif (isset($options['class']) && is_array($options['class']) && count($options['class'])) {
                 $className = $options['class'][0];
                 $classFile = isset($options['class'][1]) ? $options['class'][1] : null;
                 
@@ -135,9 +131,9 @@ class dispatcher {
                 $this->_action = $options['action'] ?: $this->_modulesData[$this->_defaultModule]['controllers']['default_action'];
             }
             //Normal route            
-            else {                             
+            else {                      
                 $this->_module = $options['module'] ?: $this->_defaultModule;                                    
-                $this->_controller = $options['controller'] ?: $this->_modulesData[$this->_defaultModule]['controllers']['default_controller'];
+                $this->_controller = $options['controller'] ?: $this->_modulesData[$this->_module]['controllers']['default_controller'];
                                 
                 $this->_controllerFile = 
                         $this->findControllerPath(
@@ -145,88 +141,100 @@ class dispatcher {
                                 (array)$this->_modulesData[$this->_module]['controllers']['dir'], 
                                 (array)$this->_modulesData[$this->_module]['controllers']['ext']
                         );
-                $this->_action = $options['action'] ?: $this->_modulesData[$this->_defaultModule]['controllers']['default_action'];
+                $this->_action = $options['action'] ?: $this->_modulesData[$this->_module]['controllers']['default_action'];
             }            
             
             $this->_params = $options['params'] ?: array();
-        }         
-        //The route is a string and we have to figure out module, controller, action and params
-        else {            
-            $segments = explode('/',$route);
-            clearstatcache();
-            
-            while (count($segments)) {
-                foreach ($segments as $k => $segment) {
-                    switch (null) {
-                        case $this->_module:
-                            if (isset($this->_modulesData[$segment])) {
-                                $this->_module = $segment;
-                                array_shift($segments);                                
-                            }                         
-                            
-                            break 2;
-                        break;
-                        case $this->_controller:
-                            if ($this->_module) {
-                                $dirs = (array)$this->_modulesData[$this->_module]['controllers']['dir'];
-                                $exts = (array)$this->_modulesData[$this->_module]['controllers']['ext'];
-                                
-                                $controllerPath = $this->findControllerPath($segment, $dirs, $exts);
-                                
-                                if ($controllerPath) {
-                                    $this->_controller = $segment;
-                                    $this->_controllerFile = $controllerPath;
-                                    $segments = array_slice($segments,$k+1);
-                                    break 2;
-                                }                                      
-                            }                            
-                        break;
-                        case $this->_action:
-                            if ($this->_module && $this->_controller) {
-                                $this->_action = $segment;
-                                array_shift($segments);
-                                
-                                $this->_params = $segments;
-                                break 2;
-                            }
-                        break;
-                    }
-                }
-                
-                
-                
-                if ($this->_module && !$this->_controller) {                    
-                    $this->_controller = $this->_modulesData[$this->_module]['controllers']['default_controller'];
-                }
-                             
-                if (!$this->_module) {
-                    $this->_module = $this->_defaultModule;
-                }
+        }                 
+        else {     
+            $this->mapStringRoute($route);                        
+        }               
+        
+        return $this;
+    }
+    
+    /**
+     * The route is a string and we have to figure out module, controller, action and params
+     * @param string $route
+     */
+    public function mapStringRoute($route) {   
+        $this->setToNullProperties();
+        
+        $segments = explode('/',$route);
+        $pkey = null;
+        clearstatcache();
+        while (true) {               
+            foreach ($segments as $segment) {
+                switch (true) {
+                    case ($this->_module == null):
+                        if (isset($this->_modulesData[$segment])) {
+                            $this->_module = $segment;                        
+                        }
+                        else {
+                            $this->_module = $this->_defaultModule;                            
+                            continue 3; //restart the loop
+                        }
+                    break;
+                    case ($this->_controller == null && $this->_module):                        
+                        $dirs = (array)$this->_modulesData[$this->_module]['controllers']['dir'];
+                        $exts = (array)$this->_modulesData[$this->_module]['controllers']['ext'];
 
-                if ($this->_module && $this->_controller && $this->_action){                    
-                    if (!empty($this->_params)) {
-                        $params = array();
-                        $pkey = null;
-                        
-                        foreach ($this->_params as $k => $p) {                            
-                            if (!($k & 1)) {
-                                $pkey = $p;                                
-                            }
-                            else {
-                                $params[$pkey] = $p;
-                            }                            
+                        $controllerPath = $this->findControllerPath($segment, $dirs, $exts);
+
+                        if ($controllerPath) {
+                            $this->_controller = $segment;
+                            $this->_controllerFile = $controllerPath;                            
+                        }    
+                        else {
+                            throw new ControllerFileNotFound;
                         }
-                        $this->_params = $params;
-                        
-                        //Catch any missing parameters
-                        if (!isset($this->_params[$pkey])) {
-                            $this->_params[$pkey] = null;
+                    break;
+                    case ($this->_action == null):
+                        $this->_action = $segment;
+                    break;
+                    case ($this->_module && $this->_controller && $this->_action):                        
+                        if ($pkey == null) {
+                            $pkey = $segment;
                         }
-                    }
+                        else {
+                            $this->_params[$pkey] = $segment;
+                            $pkey = null;
+                        }                   
                     break;
                 }
             }
-        }               
+            
+            break;
+        }
+        
+        if ($pkey) {              
+            $this->_params[$pkey] = null;              
+        }
+        
+        if ($this->_module && !$this->_controller) {                    
+            $this->_controller = $this->_modulesData[$this->_module]['controllers']['default_controller'];
+            $this->_controllerFile = $this->findControllerPath($this->_controller, (array)$this->_modulesData[$this->_module]['controllers']['dir'], (array)$this->_modulesData[$this->_module]['controllers']['ext']);
+            $this->_action = $this->_modulesData[$this->_module]['controllers']['default_action'];
+        }      
+        
+        if ($this->_module && $this->_controller && !$this->_action) {
+            $this->_action = $this->_modulesData[$this->_module]['controllers']['default_action'];            
+        }
+        
+        if ($this->_controllerFile == null) {
+            throw new ControllerFileNotFound;
+        }
+    }
+    
+    /**
+     * 
+     */
+    private function setToNullProperties() {
+        $this->_module = null;
+        $this->_controller = null;
+        $this->_controllerFile = null;
+        $this->_action = null;
+        $this->_params = array();
     }
     
     /**
@@ -260,3 +268,4 @@ class dispatcher {
 class NoRouteSetException extends \Exception {}
 class InvalidClassPathException extends \Exception {}
 class InvalidClassException extends \Exception {}
+class ControllerFileNotFound extends \Exception {}
