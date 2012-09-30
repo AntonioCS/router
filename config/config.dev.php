@@ -16,6 +16,9 @@ $routerConfig = array();
 */
 $routerConfig['only_route_entries'] = false;
 
+$routerConfig['controller_suffix'] = 'Controller';
+$routerConfig['action_suffix'] = 'Action';
+
 
 $routerConfig['modules_default_module'] = 'default';
 
