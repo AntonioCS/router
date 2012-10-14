@@ -16,6 +16,9 @@ $routerConfig = array();
 */
 $routerConfig['only_route_entries'] = false;
 
+/**
+ * @todo implement this in the code
+ */
 $routerConfig['controller_suffix'] = 'Controller';
 $routerConfig['action_suffix'] = 'Action';
 
