@@ -104,7 +104,6 @@ class dispatcher {
             
             //The route is a function
             if (isset($options['func']) && is_callable($options['func'])) {
-                //$this->_module = 'customFunction';                
                 $this->_action = $route['func'];
             }            
             
@@ -155,14 +154,16 @@ class dispatcher {
     
     /**
      * The route is a string and we have to figure out module, controller, action and params
+     * 
      * @param string $route
+     * @throws ControllerFileNotFound
      */
     public function mapStringRoute($route) {   
         $this->setToNullProperties();
         
         $segments = explode('/',$route);
         $pkey = null;
-        clearstatcache();
+        
         while (true) {               
             foreach ($segments as $segment) {
                 switch (true) {
@@ -228,6 +229,108 @@ class dispatcher {
     
     /**
      * 
+     * @throws ControllerClassNotFound
+     */
+    public function dispatch() {
+
+        $class = null;
+        $object = null;        
+        $file = null;
+                 
+        if ($this->_module != null && $this->_controller != null) {            
+            if (!class_exists($this->_controller,false)) {
+                $file = $this->_controllerFile;                     
+            }
+            $class = $this->_controller;                
+        }
+        
+        if ($file) {            
+            require($file);
+        }
+        
+        if ($class && class_exists($class,false)) {                  
+            $object = new $class;
+        }
+        else {
+            throw new ControllerClassNotFound;
+        }
+                            
+        $this->callMethod($object, $this->_action, $this->_params);
+    }
+    
+    /**
+     * Method to call function or class method
+     * 
+     * @param object|null $object
+     * @param string|function $method
+     * @param array|null $params
+     */
+    private function callMethod($object, $method, $params) {        
+        /**
+         * @todo Implement parameter passing
+         */
+        $pStruct = $this->generateParameterStructure($object, $method);
+        
+        /**
+         * @todo Implement Event Before method calling
+         */
+        if ($object == null) { //function calling
+            $method();
+        }                
+        else {
+            /**             
+             * @todo Implement method suffix (set in config)
+             */
+            $object->$method();
+        }
+        
+        /**
+         * @todo Implement Event After method calling
+         */
+    }
+    
+    /**
+     * 
+     * @param object|null $object
+     * @param function|string $method
+     * @return array Structure of parameters
+     */
+    private function generateParameterStructure($object,$method) {
+        $refObj = null;
+        $paramsList = array();
+        $paramsListStructure = array();
+        
+        if ($object == null) {
+            $refObj = new \ReflectionFunction($method);
+            $paramsList = $refObj->getParameters();
+        }
+        else {
+            if (!method_exists($object, $method)) {
+                throw new ActionMethodNotFound(get_class($object) . ' - ' . $method);
+            }
+            
+            $refObj = new \ReflectionObject($object);
+            $paramsList = $refObj->getMethod($method)->getParameters();
+        }
+        
+        //no parameters
+        if (count($paramsList) == 0) {
+            return null;
+        }
+                
+        foreach ($paramsList as $pos => $v) {                        
+            $paramsListStructure[$v->name] = array(
+                'position' => $pos,
+                'optional' => $v->isOptional(),
+                'defaultValue' => $v->isDefaultValueAvailable() ? $v->getDefaultValue() : null
+            );
+        }
+        
+        return $paramsListStructure;
+    }
+    
+    /**
+     * Clear all properties
      */
     private function setToNullProperties() {
         $this->_module = null;
@@ -269,3 +372,5 @@ class NoRouteSetException extends \Exception {}
 class InvalidClassPathException extends \Exception {}
 class InvalidClassException extends \Exception {}
 class ControllerFileNotFound extends \Exception {}
+class ControllerClassNotFound extends \Exception {}
+class ActionMethodNotFound extends \Exception {}
