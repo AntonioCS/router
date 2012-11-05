@@ -51,13 +51,15 @@ $routerConfig['modules']['default']['controllers']['enabled'] = true;
 * Path to controllers
 * @var array
 */
-$routerConfig['modules']['default']['controllers']['dir'] = array();
+$routerConfig['modules']['default']['controllers']['dir'] = array(
+    
+);
 
 /**
  * Default controller tocall
  * @var string
  */
-$routerConfig['modules']['default']['controllers']['default_controller'] = 'index';
+$routerConfig['modules']['default']['controllers']['default_controller'] = 'controller';
 
 /**
 * Default action to be called when there is no action specified
@@ -87,14 +89,13 @@ $routerConfig['routes'] = array();
 $routerConfig['routes']['GET']['defaultRoute'] = new \Router\Routes\routeStatic('', 
         array(
             'module' => 'default',
-            'controller' => 'index',
+            'controller' => 'controller',
             'action' => ''
         )
 ); //default controller    
 $routerConfig['routes']['POST'] = array();
 $routerConfig['routes']['PUT'] = array();
 $routerConfig['routes']['DELETE'] = array();
-$routerConfig['routes']['ALL'] = array();
 
 /**
 * Valid route types
