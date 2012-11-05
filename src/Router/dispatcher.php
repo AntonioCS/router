@@ -52,12 +52,16 @@ class dispatcher {
     /**
      * 
      * @param string|\Router\Routes\route $route
-     * @param array $modData All modules data
+     * @param array $config Configuration data
      */
-    public function __construct($route, array $modData, $defaultModule = 'default') {            
+    public function __construct($route, $configData) {
+        
         $this->setRoute($route);
         $this->setModulesData($modData);
+        
         $this->_defaultModule = $defaultModule;
+        
+        $this->map();
     }
     
     /**
@@ -81,8 +85,9 @@ class dispatcher {
     }
 
     /**
+     * Map the route to module, controller, action and params
      * 
-     * @param string $route
+     * @param string|route object $route
      * 
      * @throws NoRouteSetException
      * @throws InvalidClassPathException
@@ -109,6 +114,7 @@ class dispatcher {
             
             //The route is a class
             elseif (isset($options['class']) && is_array($options['class']) && count($options['class'])) {
+                
                 $className = $options['class'][0];
                 $classFile = isset($options['class'][1]) ? $options['class'][1] : null;
                 
@@ -129,7 +135,7 @@ class dispatcher {
                 $this->_controller = $className;
                 $this->_action = $options['action'] ?: $this->_modulesData[$this->_defaultModule]['controllers']['default_action'];
             }
-            //Normal route            
+            //Normal route object           
             else {                      
                 $this->_module = $options['module'] ?: $this->_defaultModule;                                    
                 $this->_controller = $options['controller'] ?: $this->_modulesData[$this->_module]['controllers']['default_controller'];
@@ -187,7 +193,9 @@ class dispatcher {
                             $this->_controllerFile = $controllerPath;                            
                         }    
                         else {
-                            throw new ControllerFileNotFound;
+                            //$this->_controller = $this->_
+                            continue 3; //restart the loop
+                            //throw new ControllerFileNotFound;
                         }
                     break;
                     case ($this->_action == null):
@@ -228,6 +236,7 @@ class dispatcher {
     }
     
     /**
+     * Dispatch the route, ie, load the file (if necessary), instantiate the class and call the method or run just run the function
      * 
      * @throws ControllerClassNotFound
      */
@@ -235,7 +244,7 @@ class dispatcher {
 
         $class = null;
         $object = null;        
-        $file = null;
+        $file = null;                     
                  
         if ($this->_module != null && $this->_controller != null) {            
             if (!class_exists($this->_controller,false)) {
@@ -244,7 +253,7 @@ class dispatcher {
             $class = $this->_controller;                
         }
         
-        if ($file) {            
+        if ($file) {          
             require($file);
         }
         
@@ -252,7 +261,7 @@ class dispatcher {
             $object = new $class;
         }
         else {
-            throw new ControllerClassNotFound;
+            throw new ControllerClassNotFound($class);
         }
                             
         $this->callMethod($object, $this->_action, $this->_params);
@@ -347,14 +356,14 @@ class dispatcher {
      * @param array $dirs Directories to search in
      * @param array $exts Possible extensions of file
      */
-    private function findControllerPath($controller, array $dirs, array $exts) {
+    private function findControllerPath($controller, array $dirs, array $exts) {        
 
         $controllerPath = null;
         
         foreach ($dirs as $dir) {
             foreach ($exts as $ext) {
                 $controllerPath = $dir . $controller . '.' . $ext;
-
+                
                 if (is_file($controllerPath)) {
                     break 2;
                 }
