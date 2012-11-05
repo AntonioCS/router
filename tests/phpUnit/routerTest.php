@@ -4,6 +4,10 @@ if (function_exists('xdebug_disable'))
     xdebug_disable();
 
 require '../../src/Router/router.php';
+require '../../src/Router/dispatcher.php';
+require '../../src/Router/Routes/route.php';
+require '../../src/Router/Routes/routeDynamic.php';
+require '../../src/Router/Routes/routeStatic.php';
 require '../../lib/settingsManager/src/SettingsManager/settingsManager.php';
 
 
@@ -23,10 +27,8 @@ class routerTest extends PHPUnit_Framework_TestCase
     protected static $config = null;
     
     public static function setUpBeforeClass()
-    {
-        $env = getenv('ENV') ?: 'dev';
-        require "../../config/config.$env.php";
-        
+    {        
+        require "../../config/config.php";        
         self::$config = new SettingsManager\settingsManager($routerConfig,true);
     }
     /**
@@ -34,7 +36,10 @@ class routerTest extends PHPUnit_Framework_TestCase
      * This method is called before a test is executed.
      */
     protected function setUp() {        
-        $this->object = new Router\router(self::$config);
+        $this->object = new Router\router(self::$config);        
+        $this->object->setControllersDir(dirname(__FILE__) . '/testAssets/modules/default/controllers/', 'default');
+        
+        //$this->object->addRoute('GET', 'teste', '');
     }
 
     /**
@@ -63,7 +68,14 @@ class routerTest extends PHPUnit_Framework_TestCase
      * @return array The configuration array of the route object (using reflection to make it available)
      */
     private function getRouteObjectConfigData() {      
-        return $this->getRouteObjectConfig()->getValue($this->object);            
+        $data = $this->getRouteObjectConfig()->getValue($this->object);
+        
+        if (is_object($data)) {
+            return $data->getData();
+        }
+        else {
+            return $data;
+        }         
     }
     
     /**
@@ -72,13 +84,14 @@ class routerTest extends PHPUnit_Framework_TestCase
      * @param array $data 
      */
     private function setRouteObjectConfigData($data) {
-        $this->getRouteObjectConfig()->setValue($this->object, $data);
+        //$this->getRouteObjectConfig()->setValue($this->object, $data);
     }
 
 
     private function addTheseRoutes() {
         $routes = array(
-            'get' => array(
+            'get' => array(//This is wrong!! 
+                //This part is suppose to be the name!! Not what is used to match
                 'teste' => 'teste__1',
                 '/index\.php\?(\d+)/' => 'index/$1',
                 '/^(.+)$/'  => 'index/$1',
@@ -89,206 +102,253 @@ class routerTest extends PHPUnit_Framework_TestCase
             'post' => array()
         );
         
-        $this->object->addRoute('get', $routes['get']);
+        //$this->object->addRoutes($routes);
+        //$this->object->addRoute('GET', 'teste',);
 
         //$this->object->addRoute($routes);
-    }    
-    
-    public function testPrivateGetConfigData() {        
-        $testdata = array('php');
-        $r = new ReflectionObject($this->object);
-        $privGetConfig = $r->getMethod('_getConfig');
-        $privGetConfig->setAccessible(true);
-        $this->assertEquals($testdata,$privGetConfig->invoke($this->object,'controllers/ext'));                              
     }
-    
-    /**
-    * @expectedException \OutOfBoundsException
-    */
-    public function testPrivateGetConfigDataFail() {        
-        $r = new ReflectionObject($this->object);
-        $privGetConfig = $r->getMethod('_getConfig');
-        $privGetConfig->setAccessible(true);
-        $privGetConfig->invoke($this->object,'noItem');
-    }
-
-    public function testClearRoutes() {
-        $this->object->clearRoutes();
-        $c = $this->getRouteObjectConfigData();
-        
-       // $this->assertTrue(empty($c['routes']));
-    }
-
-    /**
-     * @covers router::addRoute
+        /**
+     * @covers Router\router::getInstance
+     * @todo   Implement testGetInstance().
      */
-    public function testAddRoute() {
-        $this->object->clearRoutes();
-        
-        $this->object->addRoute('get','teste','teste__1');
-        
-        $c = $this->getRouteObjectConfigData();
-        
-        $this->assertEquals(array('teste' => 'teste__1'),$c['routes']['GET']);
-    }
-
-    public function testAddRouteArray() {
-        $this->object->clearRoutes();
-        $routes = array(
-                        'teste' => 'teste__1',
-                        'blaaaa' => 'sffdsasafd'
-                   );
-        $this->object->addRoute('GET',$routes);
-        
-        $c = $this->getRouteObjectConfigData();
-        
-        $this->assertEquals($routes,$c['routes']['GET']);
-    }
-
-    public function testMatchRouteNormal() {
-        $this->object->clearRoutes();
-        $this->addTheseRoutes();
-
-        $this->assertEquals('teste__1',$this->object->matchRoute('teste'));
-
-        $this->assertEquals('index',$this->object->matchRoute(''));
-    }
-
-    public function testMatchRouteRegex() {
-        $this->addTheseRoutes();
-        $this->assertEquals('index/5',$this->object->matchRoute('index.php?5'));
-        $this->assertEquals('index/test1',$this->object->matchRoute('test1'));
-    }
-    
-    public function testMatchRouteType() {
-        $this->object->clearRoutes();
-        $routes = array(
-                        'teste' => 'teste__1',
-                        'blaaaa' => 'sffdsasafd'
-                   );
-        $this->object->addRoute('put',$routes);
-        
-        $c = $this->getRouteObjectConfigData();        
-        $this->assertEquals($routes,$c['routes']['PUT']);
-        $this->assertEquals('teste__1',$this->object->matchRoute('teste'));
-        $this->assertEquals('sffdsasafd',$this->object->matchRoute('blaaaa','put'));
-    }
-    
-    public function testMatchRouteTypeAll() {
-        $this->object->clearRoutes();
-        $routes = array(
-                        'teste' => 'teste__1'                        
-                   );
-        $routes_all = array(
-                        'blaaaa' => 'sffdsasafd'
-            );
-        $this->object->addRoute('put',$routes);
-        $this->object->addRoute('all', $routes_all);
-        
-        $this->assertEquals('sffdsasafd',$this->object->matchRoute('blaaaa','put'));
-    }
-    
-
-    /**
-    * @expectedException Router\InvalidControllerDirectoryException
-    */
-    public function testSetControllersDir() {
-        $this->object->setControllersDir('no_where/');
-    }
-
-    public function testSetControllersDirValid() {
-        $this->object->setControllersDir('controllers/');        
-        $c = $this->getRouteObjectConfigData();
-        //$this->assertEquals(array('controllers/'),$c['controllers']['dir']);
-                //$this->object->getControllerDir());
-    }
-    
-    public function testGetControllersDir() {
-        $c = $this->getRouteObjectConfigData();
-        $dir = array('controllers/');
-        //$c['controllers']['dir'] = $dir;
-        
-        $this->setRouteObjectConfigData($c);
-        
-        $this->assertEquals($dir,$this->object->getControllerDir());
-    }
-
-
-    public function testSetControllersState() {        
-        $this->object->setControllersState(false);
-        $c = $this->getRouteObjectConfigData();
-        
-        $this->assertFalse($c['controllers']['enabled']);
-        //$this->setRouteObjectConfigData($c);
-        
-        //$this->_config['controllers']['enabled'] = $state;
-        //return $this;
-    }
-
-    public function testGetControllersState() {
-        $c = $this->getRouteObjectConfigData();
-        
-        $c['controllers']['enabled'] = true;
-        $this->setRouteObjectConfigData($c);
-                
-        $this->assertTrue($this->object->getControllersState());                        
-    }
-    
-    public function testAddControllerExt() {
-        $ext = 'php5';
-        $this->object->addControllerExt($ext);
-        $c = $this->getRouteObjectConfigData();
-        
-        $this->assertEquals(array('php',$ext),$c['controllers']['ext']);
-    }
-    
-    public function testAddControllerExtArray() {
-        $ext = array('php5','php3');
-        $this->object->addControllerExt($ext);
-        $c = $this->getRouteObjectConfigData();
-        
-        $this->assertEquals(array('php','php5','php3'),$c['controllers']['ext']);
-    }
-    
-    public function testAddControllerExtPreventDuplication() {
-        $ext = 'php';
-        $this->object->addControllerExt($ext);
-        $c = $this->getRouteObjectConfigData();
-        
-        $this->assertEquals(array('php'),$c['controllers']['ext']);
-    }
-
-    
-    public function testDelControllerExt() {
-        $ext = 'php';
-        $this->object->delControllerExt($ext);
-        
-        $c = $this->getRouteObjectConfigData();        
-        $this->assertEquals(array(),$c['controllers']['ext']);
-    }
-    
-    public function testDelControllerExtArray() {
-        $ext = array('php','bogus');
-        $this->object->delControllerExt($ext);
-        
-        $c = $this->getRouteObjectConfigData();        
-        $this->assertEquals(array(),$c['controllers']['ext']);
-    }
-
-    
-    public function testClearControllerExt() {
-        $this->object->clearControllerExt();
-        
-        $c = $this->getRouteObjectConfigData();        
-        $this->assertEquals(array(),$c['controllers']['ext']);       
+    public function testGetInstance()
+    {
+        // Remove the following lines when you implement this test.
+        $this->markTestIncomplete(
+          'This test has not been implemented yet.'
+        );
     }
 
     /**
-     * @covers router::run
-     * @todo   Implement testRun().
+     * @covers Router\router::setControllersState
+     * @todo   Implement testSetControllersState().
      */
-    public function testRun() {
-        $this->object->addRoute('ALL','/','controler');        
+    public function testSetControllersState()
+    {
+        // Remove the following lines when you implement this test.
+        $this->markTestIncomplete(
+          'This test has not been implemented yet.'
+        );
+    }
+
+    /**
+     * @covers Router\router::getControllersState
+     * @todo   Implement testGetControllersState().
+     */
+    public function testGetControllersState()
+    {
+        // Remove the following lines when you implement this test.
+        $this->markTestIncomplete(
+          'This test has not been implemented yet.'
+        );
+    }
+
+    /**
+     * @covers Router\router::setControllersDir
+     * @todo   Implement testSetControllersDir().
+     */
+    public function testSetControllersDir()
+    {
+        // Remove the following lines when you implement this test.
+        $this->markTestIncomplete(
+          'This test has not been implemented yet.'
+        );
+    }
+
+    /**
+     * @covers Router\router::getControllerDir
+     * @todo   Implement testGetControllerDir().
+     */
+    public function testGetControllerDir()
+    {
+        // Remove the following lines when you implement this test.
+        $this->markTestIncomplete(
+          'This test has not been implemented yet.'
+        );
+    }
+
+    /**
+     * @covers Router\router::addControllerExt
+     * @todo   Implement testAddControllerExt().
+     */
+    public function testAddControllerExt()
+    {
+        // Remove the following lines when you implement this test.
+        $this->markTestIncomplete(
+          'This test has not been implemented yet.'
+        );
+    }
+
+    /**
+     * @covers Router\router::delControllerExt
+     * @todo   Implement testDelControllerExt().
+     */
+    public function testDelControllerExt()
+    {
+        // Remove the following lines when you implement this test.
+        $this->markTestIncomplete(
+          'This test has not been implemented yet.'
+        );
+    }
+
+    /**
+     * @covers Router\router::clearControllerExt
+     * @todo   Implement testClearControllerExt().
+     */
+    public function testClearControllerExt()
+    {
+        // Remove the following lines when you implement this test.
+        $this->markTestIncomplete(
+          'This test has not been implemented yet.'
+        );
+    }
+
+    /**
+     * @covers Router\router::addRoutes
+     * @todo   Implement testAddRoutes().
+     */
+    public function testAddRoutes()
+    {
+        // Remove the following lines when you implement this test.
+        $this->markTestIncomplete(
+          'This test has not been implemented yet.'
+        );
+    }
+
+    /**
+     * @covers Router\router::addRoute
+     * @todo   Implement testAddRoute().
+     */
+    public function testAddRoute()
+    {
+        // Remove the following lines when you implement this test.
+        $this->markTestIncomplete(
+          'This test has not been implemented yet.'
+        );
+    }
+
+    /**
+     * @covers Router\router::addGet
+     * @todo   Implement testAddGet().
+     */
+    public function testAddGet()
+    {
+        // Remove the following lines when you implement this test.
+        $this->markTestIncomplete(
+          'This test has not been implemented yet.'
+        );
+    }
+
+    /**
+     * @covers Router\router::addPost
+     * @todo   Implement testAddPost().
+     */
+    public function testAddPost()
+    {
+        // Remove the following lines when you implement this test.
+        $this->markTestIncomplete(
+          'This test has not been implemented yet.'
+        );
+    }
+
+    /**
+     * @covers Router\router::addPut
+     * @todo   Implement testAddPut().
+     */
+    public function testAddPut()
+    {
+        // Remove the following lines when you implement this test.
+        $this->markTestIncomplete(
+          'This test has not been implemented yet.'
+        );
+    }
+
+    /**
+     * @covers Router\router::addDelete
+     * @todo   Implement testAddDelete().
+     */
+    public function testAddDelete()
+    {
+        // Remove the following lines when you implement this test.
+        $this->markTestIncomplete(
+          'This test has not been implemented yet.'
+        );
+    }
+
+    /**
+     * @covers Router\router::getRoutes
+     * @todo   Implement testGetRoutes().
+     */
+    public function testGetRoutes()
+    {
+        // Remove the following lines when you implement this test.
+        $this->markTestIncomplete(
+          'This test has not been implemented yet.'
+        );
+    }
+
+    /**
+     * @covers Router\router::clearRoutes
+     * @todo   Implement testClearRoutes().
+     */
+    public function testClearRoutes()
+    {
+        // Remove the following lines when you implement this test.
+        $this->markTestIncomplete(
+          'This test has not been implemented yet.'
+        );
+    }
+
+    /**
+     * @covers Router\router::matchRoute
+     * @todo   Implement testMatchRoute().
+     */
+    public function testMatchRoute()
+    {
+        // Remove the following lines when you implement this test.
+        $this->markTestIncomplete(
+          'This test has not been implemented yet.'
+        );
+    }
+
+    /**
+     * @covers Router\router::run     
+     */
+    public function testRunStaticRouteObject()
+    {
+        ob_start();
         $this->object->run('');
+        $this->assertEquals(ob_get_clean(),'Hello World');
     }
+    
+    public function testRunStringRoute() {
+        ob_start();
+        $this->object->run('index');
+        $this->assertEquals(ob_get_clean(),'Hello World');
+    }
+
+    /**
+     * @covers Router\router::setView
+     * @todo   Implement testSetView().
+     */
+    public function testSetView()
+    {
+        // Remove the following lines when you implement this test.
+        $this->markTestIncomplete(
+          'This test has not been implemented yet.'
+        );
+    }
+
+    /**
+     * @covers Router\router::getView
+     * @todo   Implement testGetView().
+     */
+    public function testGetView()
+    {
+        // Remove the following lines when you implement this test.
+        $this->markTestIncomplete(
+          'This test has not been implemented yet.'
+        );
+    }
+
 }
