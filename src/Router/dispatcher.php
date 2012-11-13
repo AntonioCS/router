@@ -29,39 +29,40 @@ class dispatcher {
      * @var array
      */
     private $_params = null;
-
-
+    
+    
     /**
-     *
+     * Config data property. Given in the constructor by the router
      * @var array
      */
-    private $_modulesData = array();
+    private $_config = array();
     
     /**
      *
      * @var string|\Router\Routes\route
      */
-    private $_route = null;
-    
-    /**
-     *
-     * @var string
-     */
-    private $_defaultModule = null;
+    private $_route = null;    
         
     /**
      * 
      * @param string|\Router\Routes\route $route
      * @param array $config Configuration data
      */
-    public function __construct($route, $configData) {
-        
+    public function __construct($route, $configData) {        
         $this->setRoute($route);
-        $this->setModulesData($modData);
-        
-        $this->_defaultModule = $defaultModule;
+        $this->setConfig($configData);                
         
         $this->map();
+    }
+    
+    /**
+     * 
+     * @param array $config
+     * @return \Router\dispatcher
+     */
+    public function setConfig($config) {
+        $this->_config = $config;
+        return $this;
     }
     
     /**
@@ -72,17 +73,7 @@ class dispatcher {
     public function setRoute($route) {
         $this->_route = $route;
         return $this;
-    }
-    
-    /**
-     * 
-     * @param array $modData
-     * @return \Router\dispatcher
-     */
-    public function setModulesData(array $modData) {
-        $this->_modulesData = $modData;
-        return $this;
-    }
+    }    
 
     /**
      * Map the route to module, controller, action and params
@@ -103,6 +94,8 @@ class dispatcher {
         }
             
         $this->setToNullProperties();
+        
+        
                 
         if ($route instanceof \Router\Routes\route) {
             $options = $route->getOptions();
@@ -133,20 +126,20 @@ class dispatcher {
                 }
                     
                 $this->_controller = $className;
-                $this->_action = $options['action'] ?: $this->_modulesData[$this->_defaultModule]['controllers']['default_action'];
+                $this->_action = $options['action'] ?: $this->_config['modules'][$this->_defaultModule]['controllers']['default_action'];
             }
             //Normal route object           
             else {                      
                 $this->_module = $options['module'] ?: $this->_defaultModule;                                    
-                $this->_controller = $options['controller'] ?: $this->_modulesData[$this->_module]['controllers']['default_controller'];
+                $this->_controller = $options['controller'] ?: $this->_config['modules'][$this->_module]['controllers']['default_controller'];
                                 
                 $this->_controllerFile = 
                         $this->findControllerPath(
                                 $this->_controller, 
-                                (array)$this->_modulesData[$this->_module]['controllers']['dir'], 
-                                (array)$this->_modulesData[$this->_module]['controllers']['ext']
+                                (array)$this->_config['modules'][$this->_module]['controllers']['dir'], 
+                                (array)$this->_config['modules'][$this->_module]['controllers']['ext']
                         );
-                $this->_action = $options['action'] ?: $this->_modulesData[$this->_module]['controllers']['default_action'];
+                $this->_action = $options['action'] ?: $this->_config['modules'][$this->_module]['controllers']['default_action'];
             }            
             
             $this->_params = $options['params'] ?: array();
@@ -169,23 +162,28 @@ class dispatcher {
         
         $segments = explode('/',$route);
         $pkey = null;
-        
+                
         while (true) {               
             foreach ($segments as $segment) {
                 switch (true) {
-                    case ($this->_module == null):
-                        if (isset($this->_modulesData[$segment])) {
+                    case ($this->_module === null):
+                        if (isset($this->_config['modules'][$segment])) {
                             $this->_module = $segment;                        
                         }
                         else {
-                            $this->_module = $this->_defaultModule;                            
+                            $this->_module = $this->_config['modules_default_module'] ?: 'default';
                             continue 3; //restart the loop
                         }
                     break;
-                    case ($this->_controller == null && $this->_module):                        
-                        $dirs = (array)$this->_modulesData[$this->_module]['controllers']['dir'];
-                        $exts = (array)$this->_modulesData[$this->_module]['controllers']['ext'];
-
+                    case ($this->_controller == null && $this->_module):                                                
+                        $dirs = (array)$this->_config['modules'][$this->_module]['controllers']['dir'];
+                        $exts = (array)$this->_config['modules'][$this->_module]['controllers']['ext'];          
+                        
+                        if ($segment == null) {
+                            $segment = $this->_config['modules'][$this->_module]['controllers']['default_controller'] ?: 'default';
+                        }
+                        
+                        
                         $controllerPath = $this->findControllerPath($segment, $dirs, $exts);
 
                         if ($controllerPath) {
@@ -193,9 +191,7 @@ class dispatcher {
                             $this->_controllerFile = $controllerPath;                            
                         }    
                         else {
-                            //$this->_controller = $this->_
-                            continue 3; //restart the loop
-                            //throw new ControllerFileNotFound;
+                            throw new ControllerFileNotFound;
                         }
                     break;
                     case ($this->_action == null):
@@ -220,18 +216,18 @@ class dispatcher {
             $this->_params[$pkey] = null;              
         }
         
-        if ($this->_module && !$this->_controller) {                    
-            $this->_controller = $this->_modulesData[$this->_module]['controllers']['default_controller'];
-            $this->_controllerFile = $this->findControllerPath($this->_controller, (array)$this->_modulesData[$this->_module]['controllers']['dir'], (array)$this->_modulesData[$this->_module]['controllers']['ext']);
-            $this->_action = $this->_modulesData[$this->_module]['controllers']['default_action'];
+        if ($this->_module && $this->_controller === null) {
+            $this->_controller = $this->_config['modules'][$this->_module]['controllers']['default_controller'];
+            $this->_controllerFile = $this->findControllerPath($this->_controller, (array)$this->_config['modules'][$this->_module]['controllers']['dir'], (array)$this->_config['modules'][$this->_module]['controllers']['ext']);
+            $this->_action = $this->_config['modules'][$this->_module]['controllers']['default_action'];
         }      
         
         if ($this->_module && $this->_controller && !$this->_action) {
-            $this->_action = $this->_modulesData[$this->_module]['controllers']['default_action'];            
+            $this->_action = $this->_config['modules'][$this->_module]['controllers']['default_action'];            
         }
         
         if ($this->_controllerFile == null) {
-            throw new ControllerFileNotFound;
+            throw new ControllerFileNotFound($this->_controller);
         }
     }
     
@@ -277,25 +273,101 @@ class dispatcher {
     private function callMethod($object, $method, $params) {        
         /**
          * @todo Implement parameter passing
+         * @todo Implement method suffix (set in config)
          */
+            
         $pStruct = $this->generateParameterStructure($object, $method);
+        
+        if ($pStruct != null) {
+            if (count($params) < $pStruct['__notOptionalParams']) {
+                throw new NotEnoughParametersForMethod($method . ' - ' . count($params) . ' - ' . $pStruct['__notOptionalParams']);
+            }            
+        }
         
         /**
          * @todo Implement Event Before method calling
          */
         if ($object == null) { //function calling
-            $method();
+            if (!empty($params)) {
+                $this->callFunctionWithParams($method, $params);
+            }
+            else {
+                $method();
+            }
+            
         }                
         else {
-            /**             
-             * @todo Implement method suffix (set in config)
-             */
-            $object->$method();
+            if (!empty($params)) {
+                $this->callObjectActionWithParams($object,$method, $params);
+            }
+            else {
+                $object->$method();
+            }
+            
         }
         
         /**
          * @todo Implement Event After method calling
          */
+    }
+    
+    /**
+     * Facilitate the calling of methods with parameters
+     *
+     * 
+     * @param mixed $object
+     * @param string $method
+     * @param array $params
+     */
+    private function callObjectActionWithParams($object, $method, $params) {
+
+        switch (count($params)) { //call_user_func_array is slow!! Try my best to avoid it
+            case 1:
+                $object->$method($params[0]);
+            break;
+            case 2:
+                $object->$method($params[0],$params[1]);
+            break;
+            case 3:
+                $object->$method($params[0],$params[1],$params[2]);
+            break;
+            case 4:
+                $object->$method($params[0],$params[1],$params[2],$params[3]);
+            break;
+            case 5:
+                $object->$method($params[0],$params[1],$params[2],$params[3],$params[4]);
+            break;
+            default:
+                call_user_func_array(array($object,$method),$params);
+        }
+    }
+    
+    /**
+     * 
+     * @param clousere $func
+     * @param array $params
+     */
+    private function callFunctionWithParams($func,$params) {
+        
+        switch (count($params)) { //call_user_func_array is slow!! Try my best to avoid it
+            case 1:
+                $func($params[0]);
+            break;
+            case 2:
+                $func($params[0],$params[1]);
+            break;
+            case 3:
+                $func($params[0],$params[1],$params[2]);
+            break;
+            case 4:
+                $func($params[0],$params[1],$params[2],$params[3]);
+            break;
+            case 5:
+                $func($params[0],$params[1],$params[2],$params[3],$params[4]);
+            break;
+            default:
+                call_user_func_array($func,$params);
+        }
     }
     
     /**
@@ -326,6 +398,8 @@ class dispatcher {
         if (count($paramsList) == 0) {
             return null;
         }
+        
+        $notOptionalParams = 0;
                 
         foreach ($paramsList as $pos => $v) {                        
             $paramsListStructure[$v->name] = array(
@@ -333,7 +407,15 @@ class dispatcher {
                 'optional' => $v->isOptional(),
                 'defaultValue' => $v->isDefaultValueAvailable() ? $v->getDefaultValue() : null
             );
+        
+            $paramsListStructure['positions'][] = $v->name;
+            
+            if (!$v->isOptional()) {
+                $notOptionalParams++;
+            }
         }
+        
+        $paramsListStructure['__notOptionalParams'] = $notOptionalParams;
         
         return $paramsListStructure;
     }
@@ -358,7 +440,7 @@ class dispatcher {
      */
     private function findControllerPath($controller, array $dirs, array $exts) {        
 
-        $controllerPath = null;
+        $controllerPath = null;                
         
         foreach ($dirs as $dir) {
             foreach ($exts as $ext) {
@@ -383,3 +465,4 @@ class InvalidClassException extends \Exception {}
 class ControllerFileNotFound extends \Exception {}
 class ControllerClassNotFound extends \Exception {}
 class ActionMethodNotFound extends \Exception {}
+class NotEnoughParametersForMethod extends \Exception {}
