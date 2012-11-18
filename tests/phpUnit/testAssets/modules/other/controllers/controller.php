@@ -1,9 +1,9 @@
 <?php
 
 
-class controlerController {
+class controller {
 
-    public function indexAction() {
+    public function index($username, $name = 'bla') {
 
     }
 
