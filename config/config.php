@@ -86,6 +86,9 @@ $routerConfig['modules']['default']['controllers']['match_controller_action_view
  * Routes of the router separated by types
  */
 $routerConfig['routes'] = array();
+/**
+ * @todo Remove this class from here. Make a simpler way to create the route!
+ */
 $routerConfig['routes']['GET']['defaultRoute'] = new \Router\Routes\routeStatic('', 
         array(
             'module' => 'default',
