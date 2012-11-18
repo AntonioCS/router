@@ -281,7 +281,9 @@ class dispatcher {
         if ($pStruct != null) {
             if (count($params) < $pStruct['__notOptionalParams']) {
                 throw new NotEnoughParametersForMethod($method . ' - ' . count($params) . ' - ' . $pStruct['__notOptionalParams']);
-            }            
+            }      
+            
+            $params = $this->reOrderParams($pStruct, $params);
         }
         
         /**
@@ -418,6 +420,16 @@ class dispatcher {
         $paramsListStructure['__notOptionalParams'] = $notOptionalParams;
         
         return $paramsListStructure;
+    }
+    
+    /**
+     * This will return the params in the correct order
+     * 
+     * @param type $pStruct
+     * @param type $params
+     */
+    private function reOrderParams($pStruct, $params) {
+        
     }
     
     /**
