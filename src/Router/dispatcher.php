@@ -410,7 +410,7 @@ class dispatcher {
                 'defaultValue' => $v->isDefaultValueAvailable() ? $v->getDefaultValue() : null
             );
         
-            $paramsListStructure['positions'][] = $v->name;
+            $paramsListStructure['__positions'][] = $v->name;
             
             if (!$v->isOptional()) {
                 $notOptionalParams++;
@@ -429,7 +429,22 @@ class dispatcher {
      * @param type $params
      */
     private function reOrderParams($pStruct, $params) {
+        $order = array();
         
+        foreach ($pStruct as $k => $item) {
+            if ($k[0] == '_' && $k[1] == '_') {
+                continue;
+            }
+                
+            if (isset($params[$k])) {
+                $order[] = $params[$k];
+            }
+            else {
+                $order[] = $item['defaultValue'];
+            }            
+        }
+        
+        return $order;        
     }
     
     /**
