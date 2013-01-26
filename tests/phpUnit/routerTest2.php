@@ -55,10 +55,8 @@ class routerTest extends PHPUnit_Framework_TestCase
     }
     
     public static function setUpBeforeClass()
-    {
-        $env = getenv('ENV') ?: 'dev';
-        require "../../config/config.$env.php";
-        
+    {        
+        require "../../config/config.php";        
         self::$config = new SettingsManager\settingsManager($routerConfig,true);
     }
     /**

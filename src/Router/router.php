@@ -344,7 +344,7 @@ class router {
         if ($path === null) {
             if (isset($_SERVER) && isset($_SERVER['QUERY_STRING'])) {
                 //In an mvc environment the index.php gets all the requests so I only need the query string part
-                $path =$_SERVER['QUERY_STRING']; //Nul byte protection - http://hakipedia.com/index.php/Poison_Null_Byte
+                $path = $_SERVER['QUERY_STRING'];
             }
             else {
                 throw new NoPathSpecifiedException();

@@ -102,7 +102,7 @@ class routeTest extends PHPUnit_Framework_TestCase
     
     /**
     * @expectedException \Router\NoRouteSetException
-     * 
+    * 
     */
     public function testRouteDispatchFail() {        
         $d = new \Router\dispatcher(null,array());

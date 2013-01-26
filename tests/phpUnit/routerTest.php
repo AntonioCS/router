@@ -91,6 +91,7 @@ class routerTest extends PHPUnit_Framework_TestCase
     private function addTheseRoutes() {
         $routes = array(
             'get' => array(//This is wrong!! 
+                //WRONG
                 //This part is suppose to be the name!! Not what is used to match
                 'teste' => 'teste__1',
                 '/index\.php\?(\d+)/' => 'index/$1',
@@ -312,7 +313,9 @@ class routerTest extends PHPUnit_Framework_TestCase
     }
 
     /**
-     * @covers Router\router::run     
+     * @covers Router\router::run  
+     * @group run
+     *    
      */
     public function testRunStaticRouteObject()
     {
@@ -321,10 +324,13 @@ class routerTest extends PHPUnit_Framework_TestCase
         $this->assertEquals(ob_get_clean(),'Hello World');
     }
     
+    /**
+     * @group run
+     * @expectedException \Router\ControllerFileNotFound
+     */
     public function testRunStringRoute() {
         ob_start();
-        $this->object->run('index');
-        $this->assertEquals(ob_get_clean(),'Hello World');
+        $this->object->run('index');        
     }
 
     /**

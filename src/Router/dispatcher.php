@@ -191,7 +191,7 @@ class dispatcher {
                             $this->_controllerFile = $controllerPath;                            
                         }    
                         else {
-                            throw new ControllerFileNotFound;
+                            throw new ControllerFileNotFound($segment);
                         }
                     break;
                     case ($this->_action == null):
@@ -425,23 +425,14 @@ class dispatcher {
     /**
      * This will return the params in the correct order
      * 
-     * @param type $pStruct
-     * @param type $params
+     * @param array $pStruct
+     * @param array $params
      */
     private function reOrderParams($pStruct, $params) {
         $order = array();
         
-        foreach ($pStruct as $k => $item) {
-            if ($k[0] == '_' && $k[1] == '_') {
-                continue;
-            }
-                
-            if (isset($params[$k])) {
-                $order[] = $params[$k];
-            }
-            else {
-                $order[] = $item['defaultValue'];
-            }            
+        foreach ($pStruct['__positions'] as $item) {           
+            $order[] = (isset($params[$item])) ? $params[$item] : $pStruct[$item]['defaultValue'];            
         }
         
         return $order;        
