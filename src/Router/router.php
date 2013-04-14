@@ -372,23 +372,6 @@ class router {
         $d = new \Router\dispatcher($route,$this->_config->getData());
         $d->dispatch();
     }
-
-    /**
-    * Set a template render object
-    *
-    * @param object $view
-    */
-    public function setView($view) {
-
-    }
-
-    /**
-    * Return render object
-    *
-    */
-    public function getView() {
-
-    }
 }
 
 /**
