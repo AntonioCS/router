@@ -8,7 +8,7 @@ namespace Router\Routes;
  *
  * @author AntonioCS
  */
-class routeStatic extends route {    
+class RouteStatic extends Route {    
     
      /**
      * 

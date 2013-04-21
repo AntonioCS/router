@@ -2,7 +2,7 @@
 
 namespace Router\Routes;
 
-class routeDynamic extends route {
+class RouteDynamic extends Route {
     
     /**
      * This is what will replace <:place holder>
@@ -24,7 +24,7 @@ class routeDynamic extends route {
      *      
      * @var array
      */
-    private $_placeHolders = array();
+    private $_placeHoldersPosition = array();
     
     /**
      *
@@ -32,6 +32,27 @@ class routeDynamic extends route {
      */
     private $_routePatternOriginal = null;    
     
+    
+    private function areTherePlaceHolders() {
+        return count($this->_placeHoldersPosition);
+    }
+    
+    private function setPlaceHolderPosition($placeHolder,$position) {
+        $this->_placeHoldersPosition[$placeHolder] = $position;
+        return $this;
+    }
+    
+    private function getAllPlaceHolders() {
+        return array_keys($this->_placeHoldersPosition);
+    }
+    
+    private function getPlaceHolderPosition($placeHolder) {
+        if (isset($this->_placeHoldersPosition[$placeHolder])) {
+            return $this->_placeHoldersPosition[$placeHolder];
+        }
+        
+        return false;
+    }
     /**
      *
      * @param string $route 
@@ -39,37 +60,40 @@ class routeDynamic extends route {
     public function setRoute($route) {
         $this->_routePatternOriginal = $route;        
         
-        $rawPattern = explode('/',$route);
-        $parsedPattern = array();
-        $placeHolder = null;
+        $segments = explode('/',$route);
+        $parsedRoutePattern = array();        
                 
                
-        foreach ($rawPattern as $place => $section) {
-            
-            //Found place holder
-            if ($section[0] === ':') {        
-                $placeHolder = substr($section, 1);
-                $regex = null;
-                
-                foreach ($this->_placeHolderRegex as $kmatch => $mregex) {
-                    if (preg_match("/$kmatch/", $placeHolder)) {
-                        $regex = $mregex;
-                    }
-                }
-                
-                if (!$regex) {
-                    throw new \Exception('Place holder miss match');
-                }
-                              
-                $this->_placeHolders[$placeHolder] = $place;
-                
-                $section = $regex;
-            }
-            
-            $parsedPattern[] = $section;
+        foreach ($segments as $place => $segment) {                        
+            $parsedRoutePattern[] = ($segment[0] === ':') ? $this->parseForPlaceHolders(substr($segment, 1), $place) : $segment;
         }
         
-        $this->_routePattern = implode('/',$parsedPattern);        
+        $this->setRoutePattern(implode('/',$parsedRoutePattern));
+    }
+    
+    /**
+     * 
+     * @param string $segment
+     * @param int $position
+     * @return string
+     * @throws \Exception
+     */
+    private function parseForPlaceHolders($placeHolder, $position) {                
+        $regexSegment = null;
+
+        foreach ($this->_placeHolderRegex as $internalRegexToMatchPlaceHolder => $regexForPlaceHolder) {
+            if (preg_match("/$internalRegexToMatchPlaceHolder/", $placeHolder)) {
+                $regexSegment = $regexForPlaceHolder;
+            }
+        }
+
+        if (!$regexSegment) {
+            throw new \Exception('Place holder miss match');
+        }
+
+        $this->setPlaceHolderPosition($placeHolder, $position); 
+
+        return $regexSegment;        
     }
     
     /**
@@ -79,11 +103,13 @@ class routeDynamic extends route {
     public function match($route) {        
         
         if (parent::match($route)) {
-            if (!empty($this->_placeHolders)) {
-                $pieces = explode('/',array_shift($this->_routeMatch));
+            if ($this->areTherePlaceHolders()) {
+                $matchedRouteInFull = explode('/',$this->_routeMatch[0]);
+                $allPlaceHolders = $this->getAllPlaceHolders();
                 
-                foreach ($this->_placeHolders as $p => $location) {
-                    $this->_options['params'][$p] = $pieces[$location];
+                foreach ($allPlaceHolders as $placeHolder) {
+                    $placeHolderLocation = $this->getPlaceHolderPosition($placeHolder);                    
+                    $this->_options['params'][$placeHolder] = (isset($matchedRouteInFull[$placeHolderLocation]) ? $matchedRouteInFull[$placeHolderLocation] : null);
                 }
             }   
             

@@ -7,7 +7,7 @@ namespace Router\Routes;
  *
  * @author AntonioCS
  */
-class route {
+class Route {
     
     /**
      * Default options for the route
@@ -80,12 +80,22 @@ class route {
         $this->_routePattern = $route;
     }    
     
+    
+    /**
+     * 
+     * @param string $pattern
+     * @return \Router\Routes\Route
+     */
+    public function setRoutePattern($pattern) {
+        $this->_routePattern = $pattern;
+        return $this;
+    }
     /**
      * Return route pattern
      * 
      * @return string
      */
-    public function getPattern() {
+    public function getRoutePattern() {
         return $this->_routePattern;
     }
     
@@ -103,14 +113,8 @@ class route {
      * @param string $route
      * @return boolean
      */
-    public function match($route) {
-        $match = array();
-        
-        if (preg_match("~$this->_routePattern~",$route,$match)) {            
-            $this->_routeMatch = $match;
-            return true;
-        }
-        
-        return false;
+    public function match($route) {                        
+        $ptrn = $this->getRoutePattern();        
+        return (preg_match("~$ptrn~",$route,$this->_routeMatch));        
     }
 }
