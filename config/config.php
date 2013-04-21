@@ -71,16 +71,6 @@ $routerConfig['modules']['default']['controllers']['default_action'] = 'index';
 * @var array
 */
 $routerConfig['modules']['default']['controllers']['ext'] = array('php');
-/**
-* Try to match a view to the controller
-* @var bool
-*/
-$routerConfig['modules']['default']['controllers']['match_controller_view'] =  true;
-/**
-* Try to match a view to the controller's action
-* @var bool
-*/
-$routerConfig['modules']['default']['controllers']['match_controller_action_view'] =  true;
 
 /**
  * Routes of the router separated by types
@@ -89,11 +79,16 @@ $routerConfig['routes'] = array();
 /**
  * @todo Remove this class from here. Make a simpler way to create the route!
  */
-$routerConfig['routes']['GET']['defaultRoute'] = new \Router\Routes\routeStatic('', 
-        array(
-            'module' => 'default',
-            'controller' => 'controller',
-            'action' => ''
+//$routerConfig['routes']['GET']['defaultRoute'] = new \Router\Routes\routeStatic('', 
+$routerConfig['routes']['GET'] = array(
+    'default' => array(
+        'match' => '',
+        'struct' =>
+            array(
+                'module' => 'default',
+                'controller' => 'controller',
+                'action' => ''
+            )
         )
 ); //default controller    
 $routerConfig['routes']['POST'] = array();
@@ -120,8 +115,4 @@ $routerConfig['modrewrite']['query_string'] = array();
 $routerConfig['modrewrite']['query_string']['controller'] = 'qc';
 $routerConfig['modrewrite']['query_string']['action'] = 'qa';
 
-/**
-* Name/function of the view class
-* @var string/function
-*/
-$routerConfig['view_class'] = '';
+return $routerConfig;
