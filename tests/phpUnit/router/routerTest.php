@@ -3,11 +3,11 @@
 if (function_exists('xdebug_disable'))
     xdebug_disable();
 
-require '../../../src/Router/router.php';
-require '../../../src/Router/dispatcher.php';
-require '../../../src/Router/Routes/route.php';
-require '../../../src/Router/Routes/routeDynamic.php';
-require '../../../src/Router/Routes/routeStatic.php';
+require '../../../src/Router/Router.php';
+require '../../../src/Router/Dispatcher.php';
+require '../../../src/Router/Routes/Route.php';
+require '../../../src/Router/Routes/RouteDynamic.php';
+require '../../../src/Router/Routes/RouteStatic.php';
 
 
 /**

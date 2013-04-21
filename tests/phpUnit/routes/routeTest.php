@@ -3,9 +3,9 @@
 if (function_exists('xdebug_disable'))
     xdebug_disable();
 
-require '../../../src/Router/Routes/route.php';
-require '../../../src/Router/Routes/routeDynamic.php';
-require '../../../src/Router/Routes/routeStatic.php';
+require '../../../src/Router/Routes/Route.php';
+require '../../../src/Router/Routes/RouteDynamic.php';
+require '../../../src/Router/Routes/RouteStatic.php';
 
 
 /**
