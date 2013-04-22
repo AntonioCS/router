@@ -102,7 +102,7 @@ class Dispatcher {
         $this->setToNullProperties();
 
         if ($route instanceof \Router\Routes\route) {
-            $this->mapRouteObjRoute($route);
+            $this->mapObjRoute($route);
         }
         else {
             $this->mapStringRoute($route);
@@ -117,7 +117,7 @@ class Dispatcher {
      * @throws InvalidClassPathException
      * @throws InvalidClassException
      */
-    public function mapRouteObjRoute(\Router\Routes\route $route) {
+    public function mapObjRoute(\Router\Routes\route $route) {
         $options = $route->getOptions();
 
         //The route is a function
